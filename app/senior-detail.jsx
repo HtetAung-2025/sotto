@@ -10,6 +10,7 @@ import {
   getDoc,
 } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
+import { sendConsultationPush } from "../lib/notifications";
 
 const TALK_TAGS = [
   "授業・課題",
@@ -104,6 +105,7 @@ export default function SeniorDetail() {
   const [feelTag, setFeelTag] = useState("");
   const [detail, setDetail] = useState("");
   const [seniorData, setSeniorData] = useState(null);
+  const [sending, setSending] = useState(false);
 
   const toUid = getParam(params.userId);
   const paramName = getParam(params.name, "名前なし");
@@ -160,33 +162,58 @@ export default function SeniorDetail() {
     }
   };
 
-  const sendPushToSenior = async (targetUid, fromName) => {
+  const sendPushToSelectedUser = async ({
+    requestId,
+    targetUid,
+    fromName,
+  }) => {
     try {
-      const seniorSnap = await getDoc(doc(db, "users", targetUid));
-      if (!seniorSnap.exists()) return;
-
-      const seniorToken = seniorSnap.data()?.expoPushToken;
-      if (!seniorToken) return;
-
-      await fetch("https://exp.host/--/api/v2/push/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          to: seniorToken,
-          title: "相談が届きました！",
-          body: `${fromName}さんから相談が届きました`,
-          sound: "default",
-        }),
+      console.log("📩 direct push start:", {
+        requestId,
+        targetUid,
+        fromName,
       });
+
+      const selectedUserSnap = await getDoc(doc(db, "users", targetUid));
+
+      if (!selectedUserSnap.exists()) {
+        console.log("⚠️ 選んだユーザーが存在しません:", targetUid);
+        return;
+      }
+
+      const selectedUserData = selectedUserSnap.data();
+      const selectedUserToken = selectedUserData.expoPushToken;
+
+      if (!selectedUserToken) {
+        console.log(
+          "⚠️ 選んだユーザーにexpoPushTokenがありません:",
+          selectedUserData.name || targetUid
+        );
+        return;
+      }
+
+      await sendConsultationPush({
+        to: selectedUserToken,
+        requestId,
+        fromName,
+        talkTags,
+        feelTag,
+        detail: detail || "少し困っているみたいです",
+        mode: "direct",
+      });
+
+      console.log("✅ direct push sent");
     } catch (error) {
-      console.log("push error:", error.message);
+      console.log("sendPushToSelectedUser error:", error.message);
     }
   };
 
   const submitConsultation = async () => {
     try {
+      if (sending) return;
+
+      setSending(true);
+
       const user = auth.currentUser;
 
       if (!user) {
@@ -216,7 +243,7 @@ export default function SeniorDetail() {
       const fromGrade = myData.grade || "";
       const fromImage = getProfileImage(myData);
 
-      await addDoc(collection(db, "requests"), {
+      const docRef = await addDoc(collection(db, "requests"), {
         type: "direct",
 
         fromUid: user.uid,
@@ -250,7 +277,11 @@ export default function SeniorDetail() {
         createdAt: serverTimestamp(),
       });
 
-      await sendPushToSenior(toUid, fromName);
+      await sendPushToSelectedUser({
+        requestId: docRef.id,
+        targetUid: toUid,
+        fromName,
+      });
 
       Alert.alert("送信しました", `${seniorName} に相談を送りました`, [
         {
@@ -259,7 +290,10 @@ export default function SeniorDetail() {
         },
       ]);
     } catch (error) {
+      console.log("submitConsultation error:", error.message);
       Alert.alert("Error", error.message);
+    } finally {
+      setSending(false);
     }
   };
 
@@ -406,15 +440,16 @@ export default function SeniorDetail() {
             width="70%"
             height={58}
             borderRadius="$10"
-            backgroundColor="#FFD966"
+            backgroundColor={sending ? "#DDD" : "#FFD966"}
             color="black"
             fontSize={22}
             fontWeight="700"
             marginTop="$3"
             marginBottom="$8"
+            disabled={sending}
             onPress={submitConsultation}
           >
-            相談を送る
+            {sending ? "送信中..." : "相談を送る"}
           </Button>
         </YStack>
       </ScrollView>

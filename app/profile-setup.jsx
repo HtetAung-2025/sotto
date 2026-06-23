@@ -24,6 +24,23 @@ const TAGS = [
 
 const TOTAL_STEPS = 4;
 
+const getProfileImage = (data) => {
+  return (
+    data?.photoURL ||
+    data?.imageUrl ||
+    data?.avatarUrl ||
+    data?.imageUri ||
+    data?.profileImage ||
+    data?.profileImageUrl ||
+    ""
+  );
+};
+
+const isRemoteImage = (uri) => {
+  if (!uri || typeof uri !== "string") return false;
+  return uri.startsWith("http://") || uri.startsWith("https://");
+};
+
 export default function ProfileSetup() {
   const [step, setStep] = useState(1);
   const [grade, setGrade] = useState("");
@@ -51,18 +68,13 @@ export default function ProfileSetup() {
         setDisplayName(data.name || "");
         setSelectedTags(data.tags || []);
 
-        const savedImage =
-          data.photoURL ||
-          data.imageUrl ||
-          data.avatarUrl ||
-          data.imageUri ||
-          null;
+        const savedImage = getProfileImage(data) || null;
 
         setImageUri(savedImage);
         setOldPhotoURL(savedImage);
       }
     } catch (error) {
-      console.log(error);
+      console.log("loadProfile error:", error.message);
     }
   };
 
@@ -75,42 +87,57 @@ export default function ProfileSetup() {
   };
 
   const pickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-    if (!permission.granted) {
-      Alert.alert("写真へのアクセスを許可してください");
-      return;
-    }
+      if (!permission.granted) {
+        Alert.alert("写真へのアクセスを許可してください");
+        return;
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
 
-    if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+      if (!result.canceled) {
+        setImageUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      Alert.alert("Error", error.message);
     }
   };
 
   const uploadProfileImage = async (uri, uid) => {
-    if (!uri) return null;
+    try {
+      if (!uri) return null;
 
-    if (uri.startsWith("https://") || uri.startsWith("http://")) {
+      // すでにFirebase StorageなどのURLなら、そのまま使う
+      if (isRemoteImage(uri)) {
+        return uri;
+      }
+
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      const imageRef = ref(storage, `profileImages/${uid}.jpg`);
+
+      await uploadBytes(imageRef, blob, {
+        contentType: "image/jpeg",
+      });
+
+      const downloadURL = await getDownloadURL(imageRef);
+
+      return downloadURL;
+    } catch (error) {
+      console.log("uploadProfileImage error:", error);
+
+      // Storageに失敗しても、プロフィール保存は止めない
+      // この端末では local uri で画像表示できる
       return uri;
     }
-
-    const response = await fetch(uri);
-    const blob = await response.blob();
-
-    const imageRef = ref(storage, `profileImages/${uid}.jpg`);
-
-    await uploadBytes(imageRef, blob);
-
-    const downloadURL = await getDownloadURL(imageRef);
-
-    return downloadURL;
   };
 
   const handleNext = () => {
@@ -142,9 +169,11 @@ export default function ProfileSetup() {
 
       setSaving(true);
 
-      const photoURL = imageUri
-        ? await uploadProfileImage(imageUri, user.uid)
-        : oldPhotoURL || null;
+      let photoURL = oldPhotoURL || null;
+
+      if (imageUri) {
+        photoURL = await uploadProfileImage(imageUri, user.uid);
+      }
 
       await setDoc(
         doc(db, "users", user.uid),
@@ -169,10 +198,11 @@ export default function ProfileSetup() {
       Alert.alert("保存しました", "プロフィールを更新しました", [
         {
           text: "OK",
-          onPress: () => router.replace("/(tabs)/settings"),
+          onPress: () => router.replace("/(tabs)/profile"),
         },
       ]);
     } catch (error) {
+      console.log("saveProfile error:", error);
       Alert.alert("Error", error.message);
     } finally {
       setSaving(false);

@@ -19,6 +19,19 @@ const isImageUri = (value) => {
   );
 };
 
+const getProfileImage = (profile) => {
+  return (
+    profile?.photoURL ||
+    profile?.imageUrl ||
+    profile?.avatarUrl ||
+    profile?.imageUri ||
+    profile?.profileImage ||
+    profile?.profileImageUrl ||
+    profile?.avatar ||
+    ""
+  );
+};
+
 export default function SettingsScreen() {
   const [notificationOn, setNotificationOn] = useState(true);
   const [profile, setProfile] = useState(null);
@@ -39,27 +52,39 @@ export default function SettingsScreen() {
       const snap = await getDoc(doc(db, "users", uid));
 
       if (snap.exists()) {
-        setProfile(snap.data());
+        const data = snap.data();
+
+        console.log("プロフィール画像:", getProfileImage(data));
+
+        setProfile(data);
         setImageError(false);
       }
     } catch (error) {
-      console.error(error);
+      console.log("fetchProfile error:", error.message);
     }
   };
 
   const checkNotificationStatus = async () => {
-    const { status } = await Notifications.getPermissionsAsync();
-    setNotificationOn(status === "granted");
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      setNotificationOn(status === "granted");
+    } catch (error) {
+      console.log("checkNotificationStatus error:", error.message);
+    }
   };
 
   const toggleNotification = async () => {
-    if (!notificationOn) {
-      const { status } = await Notifications.requestPermissionsAsync();
-      setNotificationOn(status === "granted");
-    } else {
-      Alert.alert("通知をOFFにする", "端末の設定から通知をOFFにしてください", [
-        { text: "OK" },
-      ]);
+    try {
+      if (!notificationOn) {
+        const { status } = await Notifications.requestPermissionsAsync();
+        setNotificationOn(status === "granted");
+      } else {
+        Alert.alert("通知をOFFにする", "端末の設定から通知をOFFにしてください", [
+          { text: "OK" },
+        ]);
+      }
+    } catch (error) {
+      Alert.alert("Error", error.message);
     }
   };
 
@@ -81,15 +106,7 @@ export default function SettingsScreen() {
     ]);
   };
 
-  const profileImage =
-    profile?.photoURL ||
-    profile?.imageUrl ||
-    profile?.avatarUrl ||
-    profile?.profileImage ||
-    profile?.profileImageUrl ||
-    profile?.avatar ||
-    "";
-
+  const profileImage = getProfileImage(profile);
   const canShowImage = isImageUri(profileImage) && !imageError;
 
   return (
@@ -118,7 +135,10 @@ export default function SettingsScreen() {
               borderRadius: 50,
             }}
             resizeMode="cover"
-            onError={() => setImageError(true)}
+            onError={(error) => {
+              console.log("profile image error:", error.nativeEvent);
+              setImageError(true);
+            }}
           />
         ) : (
           <Text fontSize={40} fontWeight="700" color="#1A1A1A">

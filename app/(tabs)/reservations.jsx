@@ -8,10 +8,14 @@ import {
   serverTimestamp,
   doc,
   getDoc,
+  getDocs,
+  query,
+  where,
   onSnapshot,
   updateDoc,
 } from "firebase/firestore";
 import { auth, db } from "../../lib/firebase";
+import { sendConsultationPush } from "../../lib/notifications";
 
 const FILTERS = [
   { label: "全部", value: "all" },
@@ -189,6 +193,63 @@ export default function Reservations() {
     }
   };
 
+  const sendGroupPushNotifications = async ({
+    requestId,
+    uid,
+    groupId,
+    fromName,
+  }) => {
+    try {
+      console.log("📢 group push start:", {
+        requestId,
+        uid,
+        groupId,
+        fromName,
+      });
+
+      const usersQuery = query(
+        collection(db, "users"),
+        where("groupId", "==", groupId)
+      );
+
+      const usersSnap = await getDocs(usersQuery);
+
+      const pushPromises = [];
+      let targetCount = 0;
+
+      usersSnap.forEach((userDoc) => {
+        const userData = userDoc.data();
+
+        if (userDoc.id === uid) return;
+
+        if (!userData.expoPushToken) {
+          console.log("⚠️ tokenなし:", userDoc.id, userData.name);
+          return;
+        }
+
+        targetCount += 1;
+
+        pushPromises.push(
+          sendConsultationPush({
+            to: userData.expoPushToken,
+            requestId,
+            fromName,
+            talkTags,
+            feelTag,
+            detail: detail || "少し困っているみたいです",
+            mode: "group",
+          })
+        );
+      });
+
+      console.log("📢 group push target count:", targetCount);
+
+      await Promise.all(pushPromises);
+    } catch (error) {
+      console.log("sendGroupPushNotifications error:", error.message);
+    }
+  };
+
   const handleFind = async () => {
     try {
       const uid = auth.currentUser?.uid;
@@ -208,18 +269,28 @@ export default function Reservations() {
         return;
       }
 
-      const myImage = getProfileImage(myData);
+      let latestMyData = myData;
+
+      if (!latestMyData) {
+        const mySnap = await getDoc(doc(db, "users", uid));
+        latestMyData = mySnap.exists() ? mySnap.data() : {};
+        setMyData(latestMyData);
+      }
+
+      const myImage = getProfileImage(latestMyData);
+      const groupId = latestMyData?.groupId || "test";
+      const fromName = latestMyData?.name || "匿名";
 
       const docRef = await addDoc(collection(db, "requests"), {
         type: "group",
 
         fromUid: uid,
-        fromName: myData?.name || "匿名",
-        fromGrade: myData?.grade || "",
+        fromName,
+        fromGrade: latestMyData?.grade || "",
         fromPhotoURL: myImage,
 
-        groupId: myData?.groupId || "test",
-        groupName: myData?.groupName || "",
+        groupId,
+        groupName: latestMyData?.groupName || "",
 
         talkTags,
         feelTag,
@@ -229,12 +300,20 @@ export default function Reservations() {
         createdAt: serverTimestamp(),
       });
 
+      await sendGroupPushNotifications({
+        requestId: docRef.id,
+        uid,
+        groupId,
+        fromName,
+      });
+
       setCurrentRequestId(docRef.id);
       setAnsweredRequests([]);
       setPosted(true);
 
       Alert.alert("投稿しました", "回答を待っています");
     } catch (error) {
+      console.log("handleFind error:", error.message);
       Alert.alert("Error", error.message);
     }
   };
@@ -520,7 +599,9 @@ export default function Reservations() {
 
                         <Text fontSize={18} fontWeight="700" textAlign="center">
                           {responderName}
-                          {req.respondedByGrade ? `(${req.respondedByGrade})` : ""}
+                          {req.respondedByGrade
+                            ? `(${req.respondedByGrade})`
+                            : ""}
                         </Text>
 
                         <YStack
