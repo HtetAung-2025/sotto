@@ -17,13 +17,17 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.aung2026.expo-router-example"
+      "bundleIdentifier": "com.aung2026.expo-router-example",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.aung2026.exporouterexample"
     },
     "web": {
       "bundler": "metro",
