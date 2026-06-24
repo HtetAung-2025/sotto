@@ -8,7 +8,6 @@ import {
   collection,
   serverTimestamp,
   doc,
-  getDoc,
   setDoc,
 } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
@@ -17,17 +16,7 @@ export default function GroupCreate() {
   const [step, setStep] = useState(1);
   const [groupName, setGroupName] = useState("");
   const [code, setCode] = useState("");
-
-  const goNextByRole = async (uid) => {
-    const userSnap = await getDoc(doc(db, "users", uid));
-    const userData = userSnap.exists() ? userSnap.data() : {};
-
-    if (userData.role === "senior") {
-      router.replace("/(tabs)/home");
-    } else {
-      router.replace("/(tabs)/home");
-    }
-  };
+  const [creating, setCreating] = useState(false);
 
   const createGroup = async () => {
     try {
@@ -43,24 +32,34 @@ export default function GroupCreate() {
         return;
       }
 
-      const newCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      setCreating(true);
+
+      const newCode = Math.random()
+        .toString(36)
+        .substring(2, 8)
+        .toUpperCase();
 
       const groupRef = await addDoc(collection(db, "groups"), {
-        name: groupName,
+        name: groupName.trim(),
         code: newCode,
         ownerId: user.uid,
         ownerEmail: user.email,
         members: [user.uid],
         createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
 
       await setDoc(
         doc(db, "users", user.uid),
         {
+          uid: user.uid,
+          email: user.email,
+
           groupId: groupRef.id,
           groupCode: newCode,
-          groupName,
-          updatedAt: new Date(),
+          groupName: groupName.trim(),
+
+          updatedAt: serverTimestamp(),
         },
         { merge: true }
       );
@@ -69,7 +68,13 @@ export default function GroupCreate() {
       setStep(2);
     } catch (error) {
       Alert.alert("Error", error.message);
+    } finally {
+      setCreating(false);
     }
+  };
+
+  const goToApp = () => {
+    router.replace("/(tabs)/reservations");
   };
 
   return (
@@ -88,8 +93,11 @@ export default function GroupCreate() {
           fontSize={34}
           color="#BBB"
           onPress={() => {
-            if (step === 1) router.back();
-            else setStep(1);
+            if (step === 1) {
+              router.back();
+            } else {
+              setStep(1);
+            }
           }}
         >
           ‹
@@ -106,11 +114,12 @@ export default function GroupCreate() {
       <YStack flex={1} justifyContent="center" padding="$5">
         {step === 1 && (
           <YStack gap="$5" alignItems="center">
-            <Text fontSize={20} fontWeight="700">
-              グループ名：
+            <Text fontSize={22} fontWeight="700">
+              新しいグループを作成
             </Text>
 
-            <Text fontSize={14}>
+            <Text width="82%" fontSize={14} color="#666" lineHeight={22}>
+              同じグループの人と相談を共有できます。
               グループ名を入力してください。
             </Text>
 
@@ -118,7 +127,7 @@ export default function GroupCreate() {
               width="100%"
               height={54}
               backgroundColor="white"
-              placeholder="グループ名"
+              placeholder="例：AW / Webデザイン2年"
               value={groupName}
               onChangeText={setGroupName}
             />
@@ -133,13 +142,14 @@ export default function GroupCreate() {
               fontSize={22}
               fontWeight="700"
               onPress={createGroup}
+              disabled={creating}
+              opacity={creating ? 0.6 : 1}
             >
-              次へ
+              {creating ? "作成中..." : "作成する"}
             </Button>
 
             <XStack gap="$3" marginTop="$10">
               <Text color="#999">●</Text>
-              <Text color="#DDD">○</Text>
               <Text color="#DDD">○</Text>
             </XStack>
           </YStack>
@@ -147,26 +157,32 @@ export default function GroupCreate() {
 
         {step === 2 && (
           <YStack gap="$5" alignItems="center">
-            <Text fontSize={18} fontWeight="700">
-              参加コード：
+            <Text fontSize={22} fontWeight="700">
+              グループを作成しました
+            </Text>
+
+            <Text fontSize={15} color="#666">
+              参加コード
             </Text>
 
             <YStack
-              width="70%"
-              height={80}
+              width="74%"
+              height={86}
               backgroundColor="white"
               justifyContent="center"
               alignItems="center"
-              borderRadius="$2"
+              borderRadius="$4"
+              borderWidth={1}
+              borderColor="#EEE"
             >
-              <Text fontSize={30} fontWeight="700" letterSpacing={8}>
+              <Text fontSize={32} fontWeight="800" letterSpacing={8}>
                 {code}
               </Text>
             </YStack>
 
-            <Text width="70%" fontSize={13} lineHeight={20}>
-              参加して欲しい方にこのコードを教えていただき、
-              入力していただくと参加することができます。
+            <Text width="76%" fontSize={13} color="#666" lineHeight={21}>
+              参加してほしい人にこのコードを教えてください。
+              相手は「グループ参加」からこのコードを入力すると参加できます。
             </Text>
 
             <YStack
@@ -184,18 +200,14 @@ export default function GroupCreate() {
               color="black"
               fontSize={22}
               fontWeight="700"
-              onPress={() => {
-                const user = auth.currentUser;
-                if (user) goNextByRole(user.uid);
-              }}
+              onPress={goToApp}
             >
-              次へ
+              はじめる
             </Button>
 
             <XStack gap="$3" marginTop="$4">
               <Text color="#DDD">○</Text>
               <Text color="#999">●</Text>
-              <Text color="#DDD">○</Text>
             </XStack>
           </YStack>
         )}

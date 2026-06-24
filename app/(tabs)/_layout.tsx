@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Tabs } from "expo-router";
 import {
-  Home,
-  Search,
+  PlusCircle,
   UserRound,
   Settings,
   Bell,
@@ -48,13 +47,11 @@ export default function TabLayout() {
 
           if (data.status === "cancelled") return;
 
-          // 自分の投稿に、誰かが返事した
           const repliedToMyPost =
             data.fromUid === user.uid &&
             data.status === "responded" &&
             !data.thanksSent;
 
-          // 出会う：自分宛てに届いた未返信の相談
           const directWaitingForMe =
             data.type === "direct" &&
             data.toUid === user.uid &&
@@ -62,16 +59,12 @@ export default function TabLayout() {
             data.status === "waiting" &&
             !data.respondedBy;
 
-          // 見つける：同じグループに届いた未返信の相談
           const groupWaitingForMe =
-            data.fromUid !== user.uid &&
-            data.groupId === myGroupId &&
-            data.status === "waiting" &&
-            !data.respondedBy &&
-            (data.type === "group" || (!data.type && !data.toUid));
+  data.type === "group" &&
+  data.fromUid !== user.uid &&
+  data.status === "waiting" &&
+  !data.respondedBy;
 
-          // 自分が返事した相談に、ありがとうが届いた
-          // まだ通知画面で見ていないものだけ数える
           const thanksForMe =
             data.respondedBy === user.uid &&
             data.status === "matched" &&
@@ -110,6 +103,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      initialRouteName="reservations"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: "#FFD966",
@@ -123,10 +117,10 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="home"
+        name="reservations"
         options={{
-          title: "ホーム",
-          tabBarIcon: ({ color }) => <Home color={color} size={24} />,
+          title: "投稿",
+          tabBarIcon: ({ color }) => <PlusCircle color={color} size={26} />,
         }}
       />
 
@@ -135,22 +129,6 @@ export default function TabLayout() {
         options={{
           title: "出会う",
           tabBarIcon: ({ color }) => <UserRound color={color} size={24} />,
-        }}
-      />
-
-      <Tabs.Screen
-        name="reservations"
-        options={{
-          title: "見つける",
-          tabBarIcon: ({ color }) => <Search color={color} size={24} />,
-        }}
-      />
-
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "設定",
-          tabBarIcon: ({ color }) => <Settings color={color} size={24} />,
         }}
       />
 
@@ -169,6 +147,14 @@ export default function TabLayout() {
             height: 18,
             borderRadius: 999,
           },
+        }}
+      />
+
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "設定",
+          tabBarIcon: ({ color }) => <Settings color={color} size={24} />,
         }}
       />
     </Tabs>

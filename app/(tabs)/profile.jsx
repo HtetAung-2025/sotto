@@ -53,9 +53,6 @@ export default function SettingsScreen() {
 
       if (snap.exists()) {
         const data = snap.data();
-
-        console.log("プロフィール画像:", getProfileImage(data));
-
         setProfile(data);
         setImageError(false);
       }
@@ -90,7 +87,10 @@ export default function SettingsScreen() {
 
   const handleLogout = async () => {
     Alert.alert("ログアウト", "ログアウトしますか？", [
-      { text: "キャンセル", style: "cancel" },
+      {
+        text: "キャンセル",
+        style: "cancel",
+      },
       {
         text: "ログアウト",
         style: "destructive",
@@ -135,10 +135,7 @@ export default function SettingsScreen() {
               borderRadius: 50,
             }}
             resizeMode="cover"
-            onError={(error) => {
-              console.log("profile image error:", error.nativeEvent);
-              setImageError(true);
-            }}
+            onError={() => setImageError(true)}
           />
         ) : (
           <Text fontSize={40} fontWeight="700" color="#1A1A1A">
@@ -148,100 +145,126 @@ export default function SettingsScreen() {
       </Circle>
 
       <YStack alignItems="center" gap="$1">
-        <Text fontSize={22} fontWeight="700" color="#1A1A1A">
-          {profile?.name || "---"}
+        <Text fontSize={24} fontWeight="700" color="#111">
+          {profile?.name || "名前なし"}
         </Text>
 
-        <Text fontSize={15} color="#888">
-          {profile?.grade || "---"}
+        <Text fontSize={18} color="#999">
+          {profile?.grade || ""}
         </Text>
+
+        {profile?.groupName ? (
+          <Text fontSize={13} color="#999" marginTop="$1">
+            グループ：{profile.groupName}
+          </Text>
+        ) : null}
       </YStack>
 
       <YStack width="80%" gap="$3">
         <Button
-          height={52}
+          height={54}
+          borderRadius="$5"
           backgroundColor="white"
-          color="#1A1A1A"
+          color="black"
+          fontSize={18}
           fontWeight="700"
-          fontSize={16}
-          borderRadius="$6"
-          borderWidth={0.5}
-          borderColor="#E0E0E0"
-          onPress={() => router.push("/profile-setup")}
+          borderWidth={1}
+          borderColor="#DDD"
+          onPress={() =>
+            router.push({
+              pathname: "/profile-setup",
+              params: {
+                from: "settings",
+              },
+            })
+          }
         >
           プロフィールを編集する 〉
         </Button>
 
-        <YStack
-          backgroundColor="white"
-          borderRadius="$6"
-          padding="$4"
-          gap="$2"
-          borderWidth={0.5}
-          borderColor="#E0E0E0"
-        >
-          <Text fontSize={16} fontWeight="700" color="#1A1A1A">
-            通知設定
-          </Text>
-
-          <XStack justifyContent="space-between" alignItems="center">
-            <Text fontSize={14} color="#555">
-              プッシュ通知
-            </Text>
-
-            <Switch
-              value={notificationOn}
-              onValueChange={toggleNotification}
-              trackColor={{ false: "#D9D9D9", true: "#FFD966" }}
-              thumbColor="white"
-            />
-          </XStack>
-        </YStack>
-
-        {profile?.tags?.length > 0 && (
-          <YStack
-            backgroundColor="white"
-            borderRadius="$6"
-            padding="$4"
-            gap="$2"
-            borderWidth={0.5}
-            borderColor="#E0E0E0"
-          >
-            <Text fontSize={16} fontWeight="700" color="#1A1A1A">
-              得意なこと
-            </Text>
-
-            <XStack flexWrap="wrap" gap="$2">
-              {profile.tags.map((tag) => (
-                <Text
-                  key={tag}
-                  fontSize={12}
-                  backgroundColor="#FFF3CC"
-                  color="#B8860B"
-                  paddingHorizontal="$2"
-                  paddingVertical="$1"
-                  borderRadius="$10"
-                >
-                  {tag}
-                </Text>
-              ))}
-            </XStack>
-          </YStack>
-        )}
-
         <Button
-          height={52}
-          backgroundColor="#FFD966"
-          color="#1A1A1A"
+          height={54}
+          borderRadius="$5"
+          backgroundColor="white"
+          color="black"
+          fontSize={18}
           fontWeight="700"
-          fontSize={16}
-          borderRadius="$10"
-          marginTop="$2"
-          onPress={handleLogout}
+          borderWidth={1}
+          borderColor="#DDD"
+          onPress={() => router.push("/group")}
         >
-          ログアウト
+          グループを変更する 〉
         </Button>
       </YStack>
+
+      <YStack
+        width="80%"
+        backgroundColor="white"
+        borderRadius="$5"
+        padding="$4"
+        gap="$3"
+        borderWidth={1}
+        borderColor="#DDD"
+      >
+        <Text fontSize={18} fontWeight="700">
+          通知設定
+        </Text>
+
+        <XStack alignItems="center" justifyContent="space-between">
+          <Text fontSize={16} color="#555">
+            プッシュ通知
+          </Text>
+
+          <Switch value={notificationOn} onValueChange={toggleNotification} />
+        </XStack>
+      </YStack>
+
+      <YStack
+        width="80%"
+        backgroundColor="white"
+        borderRadius="$5"
+        padding="$4"
+        gap="$3"
+        borderWidth={1}
+        borderColor="#DDD"
+      >
+        <Text fontSize={18} fontWeight="700">
+          得意なこと
+        </Text>
+
+        <XStack flexWrap="wrap" gap="$2">
+          {profile?.tags?.length > 0 ? (
+            profile.tags.map((tag) => (
+              <Text
+                key={tag}
+                backgroundColor="#FFF0C2"
+                color="#B8860B"
+                paddingHorizontal="$2"
+                paddingVertical="$1"
+                borderRadius="$10"
+                fontSize={13}
+              >
+                {tag}
+              </Text>
+            ))
+          ) : (
+            <Text color="#999">未設定</Text>
+          )}
+        </XStack>
+      </YStack>
+
+      <Button
+        width="80%"
+        height={58}
+        borderRadius="$10"
+        backgroundColor="#FFD966"
+        color="black"
+        fontSize={20}
+        fontWeight="700"
+        onPress={handleLogout}
+      >
+        ログアウト
+      </Button>
     </YStack>
   );
 }

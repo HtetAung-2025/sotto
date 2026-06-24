@@ -7,14 +7,14 @@ export default function AllowNotifications() {
   const handleAllow = async () => {
     try {
       await registerForPushNotificationsAsync();
-      router.replace("/(tabs)/home");
+      router.replace("/(tabs)/reservations");
     } catch (error: any) {
       Alert.alert("通知エラー", error.message);
     }
   };
 
   const handleSkip = () => {
-    router.replace("/(tabs)/home");
+    router.replace("/(tabs)/reservations");
   };
 
   return (

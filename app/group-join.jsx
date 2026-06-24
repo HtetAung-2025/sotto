@@ -11,24 +11,14 @@ import {
   updateDoc,
   doc,
   arrayUnion,
-  getDoc,
   setDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 
 export default function GroupJoin() {
   const [code, setCode] = useState("");
-
-  const goNextByRole = async (uid) => {
-    const userSnap = await getDoc(doc(db, "users", uid));
-    const userData = userSnap.exists() ? userSnap.data() : {};
-
-    if (userData.role === "senior") {
-      router.replace("/(tabs)/home");
-    } else {
-      router.replace("/(tabs)/home");
-    }
-  };
+  const [joining, setJoining] = useState(false);
 
   const joinGroup = async () => {
     try {
@@ -44,9 +34,13 @@ export default function GroupJoin() {
         return;
       }
 
+      setJoining(true);
+
+      const inputCode = code.trim().toUpperCase();
+
       const q = query(
         collection(db, "groups"),
-        where("code", "==", code.trim().toUpperCase())
+        where("code", "==", inputCode)
       );
 
       const snapshot = await getDocs(q);
@@ -61,22 +55,34 @@ export default function GroupJoin() {
 
       await updateDoc(doc(db, "groups", groupDoc.id), {
         members: arrayUnion(user.uid),
+        updatedAt: serverTimestamp(),
       });
 
       await setDoc(
         doc(db, "users", user.uid),
         {
+          uid: user.uid,
+          email: user.email,
+
           groupId: groupDoc.id,
           groupCode: groupData.code,
           groupName: groupData.name,
-          updatedAt: new Date(),
+
+          updatedAt: serverTimestamp(),
         },
         { merge: true }
       );
 
-      goNextByRole(user.uid);
+      Alert.alert("参加しました", `${groupData.name} に参加しました`, [
+        {
+          text: "OK",
+          onPress: () => router.replace("/(tabs)/reservations"),
+        },
+      ]);
     } catch (error) {
       Alert.alert("Error", error.message);
+    } finally {
+      setJoining(false);
     }
   };
 
@@ -110,20 +116,19 @@ export default function GroupJoin() {
 
       <YStack flex={1} justifyContent="center" padding="$5">
         <YStack gap="$5" alignItems="center">
-          <Text fontSize={18} fontWeight="700">
-            参加コード
+          <Text fontSize={22} fontWeight="700">
+            参加コードを入力
           </Text>
 
-          <Text width="80%" fontSize={13} lineHeight={20}>
-            グループ作成時のコードを確認し、参加コードを
-            入力してください。
+          <Text width="82%" fontSize={14} color="#666" lineHeight={22}>
+            グループ作成者から受け取ったコードを入力してください。
           </Text>
 
           <Input
             width="100%"
             height={54}
             backgroundColor="white"
-            placeholder="参加コード"
+            placeholder="例：ABC123"
             value={code}
             onChangeText={setCode}
             autoCapitalize="characters"
@@ -139,13 +144,14 @@ export default function GroupJoin() {
             fontSize={22}
             fontWeight="700"
             onPress={joinGroup}
+            disabled={joining}
+            opacity={joining ? 0.6 : 1}
           >
-            次へ
+            {joining ? "参加中..." : "参加する"}
           </Button>
 
           <XStack gap="$3" marginTop="$4">
             <Text color="#999">●</Text>
-            <Text color="#DDD">○</Text>
             <Text color="#DDD">○</Text>
           </XStack>
         </YStack>

@@ -12,31 +12,14 @@ export default function Group() {
     >
       <YStack alignItems="center" gap="$5">
         <YStack alignItems="center" gap="$3" marginBottom="$8">
-          <Text fontSize={18} color="#333">
-            ちょっとした
-            <Text backgroundColor="#FFE08A"> 悩みも相談 </Text>
-            も、
+          <Text fontSize={28} fontWeight="800" color="#222">
+            グループを選択
           </Text>
 
-          <Text fontSize={20} fontWeight="700" color="#333">
-            <Text backgroundColor="#FFE08A">話してみたい</Text>
-            のその気持ちも、
-          </Text>
-
-          <YStack height={36} />
-
-          <Text fontSize={16} color="#555">
-            皆さんと一緒に
-          </Text>
-
-          <Text fontSize={20} fontWeight="700" color="#333">
-            <Text backgroundColor="#FFE08A">
-              “会話の0.5歩前”に寄り添う
-            </Text>
-          </Text>
-
-          <Text fontSize={16} color="#555">
-            アプリです。
+          <Text fontSize={15} color="#666" textAlign="center" lineHeight={22}>
+            相談する相手を同じグループ内で見つけるために、
+            {"\n"}
+            グループを作成するか、既存のグループに参加してください。
           </Text>
         </YStack>
 
@@ -53,9 +36,14 @@ export default function Group() {
         >
           <XStack alignItems="center" gap="$3">
             <Users color="#FFD966" size={28} />
-            <Text fontSize={24} fontWeight="700">
-              グループ作成
-            </Text>
+            <YStack>
+              <Text fontSize={22} fontWeight="700">
+                グループ作成
+              </Text>
+              <Text fontSize={12} color="#777">
+                新しいグループを作る
+              </Text>
+            </YStack>
           </XStack>
         </Button>
 
@@ -72,9 +60,14 @@ export default function Group() {
         >
           <XStack alignItems="center" gap="$3">
             <UserPlus color="#FFD966" size={28} />
-            <Text fontSize={24} fontWeight="700">
-              グループ参加
-            </Text>
+            <YStack>
+              <Text fontSize={22} fontWeight="700">
+                グループ参加
+              </Text>
+              <Text fontSize={12} color="#777">
+                コードを入力して参加する
+              </Text>
+            </YStack>
           </XStack>
         </Button>
       </YStack>

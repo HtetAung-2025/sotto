@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, ScrollView, Pressable, Image } from "react-native";
-import { router } from "expo-router";
+import { Alert, ScrollView } from "react-native";
 import { YStack, XStack, Text, Button, Input, Card } from "tamagui";
 import {
   collection,
@@ -9,20 +8,9 @@ import {
   doc,
   getDoc,
   getDocs,
-  query,
-  where,
-  onSnapshot,
-  updateDoc,
 } from "firebase/firestore";
 import { auth, db } from "../../lib/firebase";
 import { sendConsultationPush } from "../../lib/notifications";
-
-const FILTERS = [
-  { label: "全部", value: "all" },
-  { label: "今すぐ", value: "now" },
-  { label: "後なら", value: "later" },
-  { label: "ちょっと", value: "wait" },
-];
 
 const TALK_TAGS = [
   "授業・課題",
@@ -42,16 +30,8 @@ const FEEL_TAGS = [
   "相談したい",
 ];
 
-const timingToFilter = (timing) => {
-  if (timing === "今すぐ") return "now";
-  if (timing === "後なら") return "later";
-  if (timing === "ちょっと") return "wait";
-  return "all";
-};
-
 const getProfileImage = (data) => {
   return (
-    data?.respondedByPhotoURL ||
     data?.photoURL ||
     data?.imageUrl ||
     data?.avatarUrl ||
@@ -62,73 +42,16 @@ const getProfileImage = (data) => {
   );
 };
 
-const isImageUri = (value) => {
-  if (!value || typeof value !== "string") return false;
-
-  return (
-    value.startsWith("http://") ||
-    value.startsWith("https://") ||
-    value.startsWith("file://") ||
-    value.startsWith("content://") ||
-    value.startsWith("data:image")
-  );
-};
-
-function AvatarCircle({ imageUrl, name, size = 78 }) {
-  const canShowImage = isImageUri(imageUrl);
-
-  return (
-    <YStack
-      width={size}
-      height={size}
-      borderRadius={999}
-      backgroundColor="#D9D9D9"
-      justifyContent="center"
-      alignItems="center"
-      overflow="hidden"
-    >
-      {canShowImage ? (
-        <Image
-          source={{ uri: imageUrl }}
-          style={{
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-          }}
-          resizeMode="cover"
-        />
-      ) : (
-        <Text fontSize={36} color="#555" fontWeight="700">
-          {name?.charAt(0) || "?"}
-        </Text>
-      )}
-    </YStack>
-  );
-}
-
 export default function Reservations() {
-  const [posted, setPosted] = useState(false);
-  const [currentRequestId, setCurrentRequestId] = useState("");
-
   const [talkTags, setTalkTags] = useState([]);
   const [feelTag, setFeelTag] = useState("");
   const [detail, setDetail] = useState("");
-
-  const [filter, setFilter] = useState("all");
   const [myData, setMyData] = useState(null);
-  const [answeredRequests, setAnsweredRequests] = useState([]);
+  const [posting, setPosting] = useState(false);
 
   useEffect(() => {
     fetchMyData();
   }, []);
-
-  useEffect(() => {
-    const unsubscribe = listenAnsweredRequests();
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [currentRequestId]);
 
   const fetchMyData = async () => {
     try {
@@ -145,42 +68,7 @@ export default function Reservations() {
     }
   };
 
-  const listenAnsweredRequests = () => {
-    const uid = auth.currentUser?.uid;
-    if (!uid) return null;
-
-    const unsubscribe = onSnapshot(collection(db, "requests"), (snapshot) => {
-      const list = [];
-
-      snapshot.forEach((d) => {
-        const data = { id: d.id, ...d.data() };
-
-        if (data.status === "cancelled") return;
-
-        if (currentRequestId && data.id !== currentRequestId) return;
-
-        if (
-          data.fromUid === uid &&
-          data.status === "responded" &&
-          data.respondedBy
-        ) {
-          list.push(data);
-        }
-      });
-
-      list.sort(
-        (a, b) => (b.respondedAt?.seconds || 0) - (a.respondedAt?.seconds || 0)
-      );
-
-      setAnsweredRequests(list);
-    });
-
-    return unsubscribe;
-  };
-
   const toggleTalkTag = (tag) => {
-    if (posted) return;
-
     if (talkTags.includes(tag)) {
       setTalkTags(talkTags.filter((t) => t !== tag));
     } else {
@@ -193,26 +81,15 @@ export default function Reservations() {
     }
   };
 
-  const sendGroupPushNotifications = async ({
-    requestId,
-    uid,
-    groupId,
-    fromName,
-  }) => {
+  const sendAllPushNotifications = async ({ requestId, uid, fromName }) => {
     try {
-      console.log("📢 group push start:", {
+      console.log("📢 全体通知 start:", {
         requestId,
         uid,
-        groupId,
         fromName,
       });
 
-      const usersQuery = query(
-        collection(db, "users"),
-        where("groupId", "==", groupId)
-      );
-
-      const usersSnap = await getDocs(usersQuery);
+      const usersSnap = await getDocs(collection(db, "users"));
 
       const pushPromises = [];
       let targetCount = 0;
@@ -220,8 +97,10 @@ export default function Reservations() {
       usersSnap.forEach((userDoc) => {
         const userData = userDoc.data();
 
+        // 自分には通知しない
         if (userDoc.id === uid) return;
 
+        // Expo Push Token がない人には送れない
         if (!userData.expoPushToken) {
           console.log("⚠️ tokenなし:", userDoc.id, userData.name);
           return;
@@ -242,15 +121,23 @@ export default function Reservations() {
         );
       });
 
-      console.log("📢 group push target count:", targetCount);
+      console.log("📢 全体通知 target count:", targetCount);
 
       await Promise.all(pushPromises);
+
+      console.log("✅ 全体通知 sent");
     } catch (error) {
-      console.log("sendGroupPushNotifications error:", error.message);
+      console.log("sendAllPushNotifications error:", error.message);
     }
   };
 
-  const handleFind = async () => {
+  const resetForm = () => {
+    setTalkTags([]);
+    setFeelTag("");
+    setDetail("");
+  };
+
+  const handlePost = async () => {
     try {
       const uid = auth.currentUser?.uid;
 
@@ -269,6 +156,8 @@ export default function Reservations() {
         return;
       }
 
+      setPosting(true);
+
       let latestMyData = myData;
 
       if (!latestMyData) {
@@ -278,88 +167,66 @@ export default function Reservations() {
       }
 
       const myImage = getProfileImage(latestMyData);
-      const groupId = latestMyData?.groupId || "test";
       const fromName = latestMyData?.name || "匿名";
+
+      // groupId はデータ管理用に残す
+      // ただし通知は groupId で絞らず、全員に送る
+      const groupId = latestMyData?.groupId || "all";
 
       const docRef = await addDoc(collection(db, "requests"), {
         type: "group",
 
+        // 投稿した人
         fromUid: uid,
         fromName,
         fromGrade: latestMyData?.grade || "",
         fromPhotoURL: myImage,
 
+        // 管理用
         groupId,
-        groupName: latestMyData?.groupName || "",
+        groupName: latestMyData?.groupName || "全体",
 
+        // 投稿内容
         talkTags,
         feelTag,
         detail: detail || "",
 
+        // 状態
         status: "waiting",
         createdAt: serverTimestamp(),
+
+        // リクエスト表示用
+        respondedBy: "",
+        respondedByName: "",
+        respondedByGrade: "",
+        respondedByPhotoURL: "",
+        timing: "",
+        timingLabel: "",
+        respondedAt: null,
+
+        thanksSent: false,
+        thanksSeenByResponder: false,
       });
 
-      await sendGroupPushNotifications({
+      await sendAllPushNotifications({
         requestId: docRef.id,
         uid,
-        groupId,
         fromName,
       });
 
-      setCurrentRequestId(docRef.id);
-      setAnsweredRequests([]);
-      setPosted(true);
+      resetForm();
 
-      Alert.alert("投稿しました", "回答を待っています");
+      Alert.alert(
+        "投稿しました",
+        "全員に通知しました。\n回答してくれた人は「出会う ＞ リクエスト」に表示されます。"
+      );
     } catch (error) {
-      console.log("handleFind error:", error.message);
+      console.log("handlePost error:", error.message);
       Alert.alert("Error", error.message);
+    } finally {
+      setPosting(false);
     }
   };
-
-  const cancelCurrentRequest = async () => {
-    try {
-      if (currentRequestId) {
-        await updateDoc(doc(db, "requests", currentRequestId), {
-          status: "cancelled",
-          cancelledAt: serverTimestamp(),
-        });
-      }
-
-      setPosted(false);
-      setCurrentRequestId("");
-      setTalkTags([]);
-      setFeelTag("");
-      setDetail("");
-      setFilter("all");
-      setAnsweredRequests([]);
-
-      Alert.alert("キャンセルしました", "投稿を取り消しました");
-    } catch (error) {
-      Alert.alert("Error", error.message);
-    }
-  };
-
-  const handleCancel = () => {
-    Alert.alert(
-      "キャンセルしますか？",
-      "投稿を取り消すと、相手側の通知からも消えます。",
-      [
-        { text: "やめる", style: "cancel" },
-        {
-          text: "キャンセルする",
-          style: "destructive",
-          onPress: cancelCurrentRequest,
-        },
-      ]
-    );
-  };
-
-  const filteredAnsweredRequests =
-    filter === "all"
-      ? answeredRequests
-      : answeredRequests.filter((req) => timingToFilter(req.timing) === filter);
 
   return (
     <YStack flex={1} backgroundColor="#F3F3F3">
@@ -368,265 +235,113 @@ export default function Reservations() {
         contentContainerStyle={{
           paddingTop: 70,
           paddingHorizontal: 14,
-          paddingBottom: 180,
+          paddingBottom: 160,
         }}
       >
         <YStack gap="$4">
-          {!posted && (
-            <Text textAlign="center" color="#999" fontSize={12}>
-              🔒 あなたの名前は相手側には表示されません。
-              {"\n"}
-              気軽に入力してみてくださいね
+          <YStack gap="$2" paddingHorizontal="$2">
+            <Text fontSize={28} fontWeight="800" color="#222">
+              投稿
             </Text>
-          )}
 
-          {!posted ? (
-            <Card backgroundColor="white" borderRadius="$6" padding="$4" gap="$4">
-              <YStack gap="$2">
-                <Text fontWeight="700">
-                  🟡 話したいこと
-                  <Text fontSize={11}> ※3つまで選択できます。</Text>
-                </Text>
+            <Text fontSize={14} color="#777" lineHeight={21}>
+              相談したい内容を全体に投稿します。
+              {"\n"}
+              回答してくれた人は「出会う ＞ リクエスト」に表示されます。
+            </Text>
+          </YStack>
 
-                <XStack flexWrap="wrap" gap="$2">
-                  {TALK_TAGS.map((tag) => (
-                    <Button
-                      key={tag}
-                      size="$2"
-                      borderRadius="$10"
-                      backgroundColor={
-                        talkTags.includes(tag) ? "#E8C75A" : "white"
-                      }
-                      borderWidth={1}
-                      borderColor="#CCC"
-                      color={talkTags.includes(tag) ? "white" : "#999"}
-                      onPress={() => toggleTalkTag(tag)}
-                    >
-                      {tag}
-                    </Button>
-                  ))}
-                </XStack>
-              </YStack>
+          <Text textAlign="center" color="#999" fontSize={12}>
+            🔒 あなたの名前は相手側には表示されません。
+            {"\n"}
+            気軽に投稿してみてください。
+          </Text>
 
-              <YStack gap="$2">
-                <Text fontWeight="700">
-                  🟡 自分の状態
-                  <Text fontSize={11}> ※1つまで選択できます。</Text>
-                </Text>
+          <Card backgroundColor="white" borderRadius="$6" padding="$4" gap="$4">
+            <YStack gap="$2">
+              <Text fontWeight="700">
+                🟡 話したいこと
+                <Text fontSize={11}> ※3つまで選択できます。</Text>
+              </Text>
 
-                <XStack flexWrap="wrap" gap="$2">
-                  {FEEL_TAGS.map((tag) => (
-                    <Button
-                      key={tag}
-                      size="$2"
-                      borderRadius="$10"
-                      backgroundColor={feelTag === tag ? "#BDBDBD" : "white"}
-                      borderWidth={1}
-                      borderColor="#CCC"
-                      color={feelTag === tag ? "white" : "#999"}
-                      onPress={() => setFeelTag(tag)}
-                    >
-                      {tag}
-                    </Button>
-                  ))}
-                </XStack>
-              </YStack>
-
-              <YStack gap="$2">
-                <Text fontWeight="700">🟡 話したいこと詳細記入</Text>
-
-                <Input
-                  height={48}
-                  placeholder="話したいことの詳細を記入してください"
-                  value={detail}
-                  onChangeText={setDetail}
-                  backgroundColor="white"
-                />
-              </YStack>
-            </Card>
-          ) : (
-            <Card
-              backgroundColor="white"
-              borderRadius="$6"
-              padding="$4"
-              gap="$3"
-              shadowColor="#000"
-              shadowOpacity={0.12}
-              shadowRadius={8}
-              shadowOffset={{ width: 0, height: 3 }}
-              elevation={3}
-            >
-              <XStack gap="$2" flexWrap="wrap" alignItems="center">
-                <Text fontSize={14} fontWeight="700">
-                  ● 話したいこと
-                </Text>
-
-                {talkTags.map((tag) => (
-                  <Text
-                    key={tag}
-                    backgroundColor="#E8C75A"
-                    color="white"
-                    paddingHorizontal="$2"
-                    paddingVertical="$1"
-                    borderRadius="$10"
-                    fontSize={12}
-                    fontWeight="700"
-                  >
-                    {tag}
-                  </Text>
-                ))}
-              </XStack>
-
-              <XStack gap="$2" flexWrap="wrap" alignItems="center">
-                <Text fontSize={14} fontWeight="700">
-                  ● 自分の状態
-                </Text>
-
-                <Text
-                  backgroundColor="#BDBDBD"
-                  color="white"
-                  paddingHorizontal="$2"
-                  paddingVertical="$1"
-                  borderRadius="$10"
-                  fontSize={12}
-                  fontWeight="700"
-                >
-                  {feelTag}
-                </Text>
-              </XStack>
-
-              <YStack gap="$1">
-                <Text fontSize={14} fontWeight="700">
-                  ● 話したいこと詳細記入
-                </Text>
-
-                <Text fontSize={13} color="#333" lineHeight={20}>
-                  {detail || "詳細はまだ入力されていません。"}
-                </Text>
-              </YStack>
-            </Card>
-          )}
-
-          {!posted && (
-            <Button
-              alignSelf="center"
-              width="70%"
-              height={58}
-              borderRadius="$10"
-              backgroundColor="#FFD966"
-              color="black"
-              fontSize={22}
-              fontWeight="700"
-              onPress={handleFind}
-            >
-              見つける
-            </Button>
-          )}
-
-          {posted && (
-            <>
-              <XStack justifyContent="center">
-                <Button
-                  width={150}
-                  height={48}
-                  borderRadius="$10"
-                  backgroundColor="#DDD"
-                  color="black"
-                  fontWeight="700"
-                  onPress={handleCancel}
-                >
-                  キャンセル
-                </Button>
-              </XStack>
-
-              <XStack flexWrap="wrap" gap="$2" justifyContent="center">
-                {FILTERS.map((f) => (
+              <XStack flexWrap="wrap" gap="$2">
+                {TALK_TAGS.map((tag) => (
                   <Button
-                    key={f.value}
+                    key={tag}
                     size="$2"
                     borderRadius="$10"
-                    backgroundColor={filter === f.value ? "#FFD966" : "white"}
-                    color="black"
-                    onPress={() => setFilter(f.value)}
+                    backgroundColor={
+                      talkTags.includes(tag) ? "#E8C75A" : "white"
+                    }
+                    borderWidth={1}
+                    borderColor="#CCC"
+                    color={talkTags.includes(tag) ? "white" : "#999"}
+                    onPress={() => toggleTalkTag(tag)}
                   >
-                    {f.label}
+                    {tag}
                   </Button>
                 ))}
               </XStack>
+            </YStack>
 
-              <Text textAlign="center" color="#AAA" fontSize={12}>
-                回答してくれた人
+            <YStack gap="$2">
+              <Text fontWeight="700">
+                🟡 自分の状態
+                <Text fontSize={11}> ※1つまで選択できます。</Text>
               </Text>
 
-              <XStack flexWrap="wrap" gap="$4">
-                {filteredAnsweredRequests.map((req) => {
-                  const responderImage = getProfileImage(req);
-                  const responderName = req.respondedByName || "名前なし";
-
-                  return (
-                    <Pressable
-                      key={req.id}
-                      onPress={() =>
-                        router.push({
-                          pathname: "/request-detail",
-                          params: {
-                            id: req.id,
-                            name: responderName,
-                            timing: req.timing || "",
-                            talkTags: req.talkTags?.join(",") || "",
-                            feelTag: req.feelTag || "",
-                            detail: req.detail || "",
-                            imageUrl: responderImage || "",
-                          },
-                        })
-                      }
-                      style={{ width: "47%" }}
-                    >
-                      <Card
-                        minHeight={175}
-                        backgroundColor="white"
-                        borderRadius="$6"
-                        alignItems="center"
-                        justifyContent="center"
-                        gap="$2"
-                        padding="$3"
-                      >
-                        <AvatarCircle
-                          imageUrl={responderImage}
-                          name={responderName}
-                          size={78}
-                        />
-
-                        <Text fontSize={18} fontWeight="700" textAlign="center">
-                          {responderName}
-                          {req.respondedByGrade
-                            ? `(${req.respondedByGrade})`
-                            : ""}
-                        </Text>
-
-                        <YStack
-                          backgroundColor="#D7F7EF"
-                          borderRadius="$10"
-                          paddingHorizontal="$3"
-                          paddingVertical="$1"
-                        >
-                          <Text color="#2AA985" fontWeight="700" fontSize={13}>
-                            {req.timing}
-                          </Text>
-                        </YStack>
-                      </Card>
-                    </Pressable>
-                  );
-                })}
-
-                {filteredAnsweredRequests.length === 0 && (
-                  <YStack width="100%" alignItems="center" paddingTop="$4">
-                    <Text color="#999">まだ回答はありません</Text>
-                  </YStack>
-                )}
+              <XStack flexWrap="wrap" gap="$2">
+                {FEEL_TAGS.map((tag) => (
+                  <Button
+                    key={tag}
+                    size="$2"
+                    borderRadius="$10"
+                    backgroundColor={feelTag === tag ? "#BDBDBD" : "white"}
+                    borderWidth={1}
+                    borderColor="#CCC"
+                    color={feelTag === tag ? "white" : "#999"}
+                    onPress={() => setFeelTag(tag)}
+                  >
+                    {tag}
+                  </Button>
+                ))}
               </XStack>
-            </>
-          )}
+            </YStack>
+
+            <YStack gap="$2">
+              <Text fontWeight="700">🟡 話したいこと詳細記入</Text>
+
+              <Input
+                height={48}
+                placeholder="話したいことの詳細を記入してください"
+                value={detail}
+                onChangeText={setDetail}
+                backgroundColor="white"
+              />
+            </YStack>
+          </Card>
+
+          <Button
+            alignSelf="center"
+            width="82%"
+            height={58}
+            borderRadius="$10"
+            backgroundColor="#FFD966"
+            color="black"
+            fontSize={20}
+            fontWeight="700"
+            onPress={handlePost}
+            disabled={posting}
+            opacity={posting ? 0.6 : 1}
+          >
+            {posting ? "投稿中..." : "この内容で投稿する"}
+          </Button>
+
+          <Text textAlign="center" color="#AAA" fontSize={12} lineHeight={18}>
+            投稿後、全員に通知が届きます。
+            {"\n"}
+            回答者は「出会う」のリクエストに表示されます。
+          </Text>
         </YStack>
       </ScrollView>
     </YStack>

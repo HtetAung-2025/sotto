@@ -163,61 +163,61 @@ export default function NotificationsScreen() {
       }
     };
 
-    const startListening = async () => {
-      try {
-        const mySnap = await getDoc(doc(db, "users", currentUid));
-        const myData = mySnap.exists() ? mySnap.data() : {};
-        const myGroupId = myData.groupId || "test";
+    unsubscribe = onSnapshot(
+      collection(db, "requests"),
+      (snapshot) => {
+        const mine = [];
+        const others = [];
+        const all = [];
 
-        unsubscribe = onSnapshot(collection(db, "requests"), (snapshot) => {
-          const mine = [];
-          const others = [];
-          const all = [];
+        snapshot.forEach((d) => {
+          const data = {
+            id: d.id,
+            ...d.data(),
+          };
 
-          snapshot.forEach((d) => {
-            const data = { id: d.id, ...d.data() };
+          if (data.status === "cancelled") return;
 
-            if (data.status === "cancelled") return;
+          all.push(data);
 
-            all.push(data);
+          // 自分が投稿した相談
+          if (data.fromUid === currentUid) {
+            mine.push(data);
+          }
 
-            if (data.fromUid === currentUid) {
-              mine.push(data);
-            }
+          // 個人的に自分へ届いた相談
+          const isDirectForMe =
+            data.type === "direct" &&
+            data.fromUid !== currentUid &&
+            data.toUid === currentUid;
 
-            const isGroup =
-              data.fromUid !== currentUid &&
-              data.groupId === myGroupId &&
-              (data.type === "group" || (!data.type && !data.toUid));
+          // 投稿タブから全体に投稿された相談
+          // groupId では絞らない
+          const isGroupForMe =
+            data.type === "group" &&
+            data.fromUid !== currentUid;
 
-            const isDirect =
-              data.fromUid !== currentUid &&
-              data.toUid === currentUid &&
-              (data.type === "direct" || !!data.toUid);
-
-            if (isGroup || isDirect) {
-              others.push(data);
-            }
-          });
-
-          mine.sort(
-            (a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)
-          );
-
-          others.sort(
-            (a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)
-          );
-
-          setMyRequests(mine);
-          setOtherRequests(others);
-          fetchRelatedProfiles(all);
+          if (isDirectForMe || isGroupForMe) {
+            others.push(data);
+          }
         });
-      } catch (error) {
+
+        mine.sort(
+          (a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)
+        );
+
+        others.sort(
+          (a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)
+        );
+
+        setMyRequests(mine);
+        setOtherRequests(others);
+        fetchRelatedProfiles(all);
+      },
+      (error) => {
         Alert.alert("Error", error.message);
       }
-    };
-
-    startListening();
+    );
 
     return () => {
       if (unsubscribe) unsubscribe();
@@ -259,6 +259,7 @@ export default function NotificationsScreen() {
         respondedByGrade: myData.grade || "",
         respondedByPhotoURL: myImage,
         timing,
+        timingLabel: timing,
         status: "responded",
         respondedAt: serverTimestamp(),
       });
@@ -275,6 +276,10 @@ export default function NotificationsScreen() {
             title: "お返事が届きました！",
             body: `${myName}さんが「${timing}」で返信しました`,
             sound: "default",
+            data: {
+              requestId: request.id,
+              type: "response",
+            },
           }),
         });
       }
@@ -311,19 +316,29 @@ export default function NotificationsScreen() {
 
   const getRequestTypeLabel = (req) => {
     if (req.type === "direct") return "出会う";
-    return "見つける";
+    if (req.type === "group") return "投稿";
+    return "投稿";
   };
 
+  const getWaitingTypeLabel = (req) => {
+    if (req.type === "direct") return "あなた宛て";
+    if (req.type === "group") return "全体投稿";
+    return "全体投稿";
+  };
+
+  // 自分の投稿に返事が来たもの
   const respondedRequests = myRequests.filter(
     (r) => r.status === "responded" || r.status === "matched"
   );
 
+  // 自分が返信したもの
   const myRespondedOthers = otherRequests.filter(
     (r) =>
       r.respondedBy === currentUid &&
       (r.status === "responded" || r.status === "matched")
   );
 
+  // 自分がまだ返信していない相談
   const waitingRequests = otherRequests.filter(
     (r) => r.status === "waiting" && !r.respondedBy
   );
@@ -335,9 +350,6 @@ export default function NotificationsScreen() {
     )
     .join("|");
 
-  // 重要：
-  // useEffect ではなく useFocusEffect にする。
-  // これで「通知タブを本当に開いた時だけ」ありがとう通知を既読にする。
   useFocusEffect(
     useCallback(() => {
       const markThanksAsSeen = async () => {
@@ -421,7 +433,9 @@ export default function NotificationsScreen() {
                       <DateBadge
                         label={req.status === "matched" ? "完了" : "返信"}
                         value={
-                          req.status === "matched" ? req.thanksAt : req.respondedAt
+                          req.status === "matched"
+                            ? req.thanksAt
+                            : req.respondedAt
                         }
                       />
                     </XStack>
@@ -511,7 +525,9 @@ export default function NotificationsScreen() {
                     <DateBadge
                       label={req.status === "matched" ? "ありがとう" : "返信"}
                       value={
-                        req.status === "matched" ? req.thanksAt : req.respondedAt
+                        req.status === "matched"
+                          ? req.thanksAt
+                          : req.respondedAt
                       }
                     />
                   </XStack>
@@ -639,7 +655,7 @@ export default function NotificationsScreen() {
                 <YStack padding="$4" gap="$3">
                   <XStack justifyContent="space-between" alignItems="center">
                     <Text fontSize={12} color="#999">
-                      {req.type === "direct" ? "あなた宛て" : "グループ宛て"}
+                      {getWaitingTypeLabel(req)}
                     </Text>
 
                     <DateBadge label="投稿" value={req.createdAt} />

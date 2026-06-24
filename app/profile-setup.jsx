@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { Alert, Image } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { YStack, XStack, H1, Text, Button, Input } from "tamagui";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { auth, db, storage } from "../lib/firebase";
+import { auth, db } from "../lib/firebase";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 
 const TAGS = [
   "企画",
@@ -36,18 +36,19 @@ const getProfileImage = (data) => {
   );
 };
 
-const isRemoteImage = (uri) => {
-  if (!uri || typeof uri !== "string") return false;
-  return uri.startsWith("http://") || uri.startsWith("https://");
-};
-
 export default function ProfileSetup() {
+  const params = useLocalSearchParams();
+  const from = params?.from;
+
   const [step, setStep] = useState(1);
   const [grade, setGrade] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
+
   const [imageUri, setImageUri] = useState(null);
+  const [imageBase64, setImageBase64] = useState(null);
   const [oldPhotoURL, setOldPhotoURL] = useState(null);
+
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -99,44 +100,39 @@ export default function ProfileSetup() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
+        quality: 0.4,
       });
 
       if (!result.canceled) {
-        setImageUri(result.assets[0].uri);
+        const asset = result.assets[0];
+
+        // 画像を 240px × 240px に縮小して軽くする
+        const resizedImage = await ImageManipulator.manipulateAsync(
+          asset.uri,
+          [
+            {
+              resize: {
+                width: 240,
+                height: 240,
+              },
+            },
+          ],
+          {
+            compress: 0.35,
+            format: ImageManipulator.SaveFormat.JPEG,
+            base64: true,
+          }
+        );
+
+        setImageUri(resizedImage.uri);
+
+        if (resizedImage.base64) {
+          const dataUrl = `data:image/jpeg;base64,${resizedImage.base64}`;
+          setImageBase64(dataUrl);
+        }
       }
     } catch (error) {
       Alert.alert("Error", error.message);
-    }
-  };
-
-  const uploadProfileImage = async (uri, uid) => {
-    try {
-      if (!uri) return null;
-
-      // すでにFirebase StorageなどのURLなら、そのまま使う
-      if (isRemoteImage(uri)) {
-        return uri;
-      }
-
-      const response = await fetch(uri);
-      const blob = await response.blob();
-
-      const imageRef = ref(storage, `profileImages/${uid}.jpg`);
-
-      await uploadBytes(imageRef, blob, {
-        contentType: "image/jpeg",
-      });
-
-      const downloadURL = await getDownloadURL(imageRef);
-
-      return downloadURL;
-    } catch (error) {
-      console.log("uploadProfileImage error:", error);
-
-      // Storageに失敗しても、プロフィール保存は止めない
-      // この端末では local uri で画像表示できる
-      return uri;
     }
   };
 
@@ -169,11 +165,9 @@ export default function ProfileSetup() {
 
       setSaving(true);
 
-      let photoURL = oldPhotoURL || null;
-
-      if (imageUri) {
-        photoURL = await uploadProfileImage(imageUri, user.uid);
-      }
+      // 新しく画像を選んだ場合は軽量化した base64 を保存
+      // 選び直していない場合は前の画像をそのまま使う
+      const photoURL = imageBase64 || oldPhotoURL || null;
 
       await setDoc(
         doc(db, "users", user.uid),
@@ -189,6 +183,8 @@ export default function ProfileSetup() {
           imageUrl: photoURL,
           avatarUrl: photoURL,
           imageUri: photoURL,
+          profileImage: photoURL,
+          profileImageUrl: photoURL,
 
           updatedAt: serverTimestamp(),
         },
@@ -198,7 +194,13 @@ export default function ProfileSetup() {
       Alert.alert("保存しました", "プロフィールを更新しました", [
         {
           text: "OK",
-          onPress: () => router.replace("/(tabs)/profile"),
+          onPress: () => {
+            if (from === "settings") {
+              router.replace("/(tabs)/profile");
+            } else {
+              router.replace("/group");
+            }
+          },
         },
       ]);
     } catch (error) {
@@ -208,6 +210,8 @@ export default function ProfileSetup() {
       setSaving(false);
     }
   };
+
+  const previewImage = imageBase64 || imageUri;
 
   return (
     <YStack
@@ -260,9 +264,9 @@ export default function ProfileSetup() {
               overflow="hidden"
               onPress={pickImage}
             >
-              {imageUri ? (
+              {previewImage ? (
                 <Image
-                  source={{ uri: imageUri }}
+                  source={{ uri: previewImage }}
                   style={{
                     width: 120,
                     height: 120,

@@ -50,14 +50,23 @@ const normalizeStatus = (status) => {
   return "now";
 };
 
+const timingToFilter = (timing) => {
+  if (timing === "今すぐ") return "now";
+  if (timing === "後なら") return "later";
+  if (timing === "ちょっと") return "wait";
+  return "all";
+};
+
 const getProfileImage = (user) => {
   return (
+    user?.respondedByPhotoURL ||
     user?.photoURL ||
     user?.imageUrl ||
     user?.avatarUrl ||
     user?.imageUri ||
     user?.profileImage ||
     user?.profileImageUrl ||
+    user?.avatar ||
     ""
   );
 };
@@ -74,10 +83,122 @@ const isImageUri = (value) => {
   );
 };
 
+function AvatarCircle({
+  imageUrl,
+  name,
+  size = 86,
+  bg = "#FFD966",
+  imageError,
+  onImageError,
+}) {
+  const canShowImage = isImageUri(imageUrl) && !imageError;
+
+  return (
+    <View
+      style={[
+        styles.avatarBase,
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: bg,
+        },
+      ]}
+    >
+      {canShowImage ? (
+        <Image
+          source={{ uri: imageUrl }}
+          style={{
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+          }}
+          resizeMode="cover"
+          onError={onImageError}
+        />
+      ) : (
+        <Text
+          style={[
+            styles.avatarText,
+            {
+              fontSize: size >= 80 ? 36 : 24,
+              color: bg === "#5B8DB8" ? "white" : "#111",
+            },
+          ]}
+        >
+          {name?.charAt(0) || "?"}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+function PostSummaryCard({ post, onCancel }) {
+  if (!post) return null;
+
+  const canCancel = post.status !== "matched" && post.thanksSent !== true;
+
+  return (
+    <View style={styles.postSummaryCard}>
+      <View style={styles.summaryRow}>
+        <Text style={styles.summaryDot}>●</Text>
+        <Text style={styles.summaryTitle}>話したいこと</Text>
+
+        <View style={styles.summaryTags}>
+          {post.talkTags?.length > 0 ? (
+            post.talkTags.map((tag) => (
+              <Text key={tag} style={styles.summaryTagYellow}>
+                {tag}
+              </Text>
+            ))
+          ) : (
+            <Text style={styles.summaryEmpty}>未選択</Text>
+          )}
+        </View>
+      </View>
+
+      <View style={styles.summaryRow}>
+        <Text style={styles.summaryDot}>●</Text>
+        <Text style={styles.summaryTitle}>自分の状態</Text>
+
+        <Text style={styles.summaryTagGray}>{post.feelTag || "未選択"}</Text>
+      </View>
+
+      <View style={styles.summaryDetailBox}>
+        <View style={styles.summaryDetailTitleRow}>
+          <Text style={styles.summaryDot}>●</Text>
+          <Text style={styles.summaryTitle}>話したいこと詳細記入</Text>
+        </View>
+
+        <Text style={styles.summaryDetailText}>
+          {post.detail || "詳細はまだ入力されていません。"}
+        </Text>
+      </View>
+
+      {canCancel && (
+        <TouchableOpacity
+          style={styles.cancelButton}
+          activeOpacity={0.8}
+          onPress={onCancel}
+        >
+          <Text style={styles.cancelButtonText}>キャンセル</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
 export default function Seniors() {
+  const [topTab, setTopTab] = useState("all");
   const [activeFilter, setActiveFilter] = useState("all");
+
   const [users, setUsers] = useState([]);
   const [myData, setMyData] = useState(null);
+
+  const [requestResponses, setRequestResponses] = useState([]);
+  const [latestMyPost, setLatestMyPost] = useState(null);
+
+  const [imageErrors, setImageErrors] = useState({});
 
   useEffect(() => {
     const currentUid = auth.currentUser?.uid;
@@ -87,7 +208,7 @@ export default function Seniors() {
       return;
     }
 
-    const unsubscribe = onSnapshot(
+    const unsubscribeUsers = onSnapshot(
       collection(db, "users"),
       (snapshot) => {
         const allUsers = [];
@@ -105,7 +226,6 @@ export default function Seniors() {
         const others = allUsers.filter((u) => {
           if (u.id === currentUid) return false;
 
-          // groupId がある場合は同じグループだけ表示
           if (me?.groupId && u.groupId && u.groupId !== me.groupId) {
             return false;
           }
@@ -120,7 +240,62 @@ export default function Seniors() {
       }
     );
 
-    return () => unsubscribe();
+    const unsubscribeRequests = onSnapshot(
+      collection(db, "requests"),
+      (snapshot) => {
+        const myPosts = [];
+
+        snapshot.forEach((d) => {
+          const data = {
+            id: d.id,
+            ...d.data(),
+          };
+
+          if (data.status === "cancelled") return;
+
+          const isMyGroupPost =
+            data.type === "group" && data.fromUid === currentUid;
+
+          if (isMyGroupPost) {
+            myPosts.push(data);
+          }
+        });
+
+        myPosts.sort(
+          (a, b) =>
+            (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)
+        );
+
+        const latestPost = myPosts[0] || null;
+
+        if (!latestPost) {
+          setLatestMyPost(null);
+          setRequestResponses([]);
+          return;
+        }
+
+        setLatestMyPost(latestPost);
+
+        const responses = [];
+
+        if (
+          latestPost.respondedBy &&
+          (latestPost.status === "responded" || latestPost.status === "matched")
+        ) {
+          responses.push(latestPost);
+        }
+
+        setRequestResponses(responses);
+      },
+      (error) => {
+        Alert.alert("Error", error.message);
+      }
+    );
+
+    return () => {
+      unsubscribeUsers();
+      unsubscribeRequests();
+    };
   }, []);
 
   const changeMyStatus = async (newStatus) => {
@@ -136,6 +311,43 @@ export default function Seniors() {
         status: newStatus,
         updatedAt: serverTimestamp(),
       });
+    } catch (error) {
+      Alert.alert("Error", error.message);
+    }
+  };
+
+  const cancelLatestPost = async () => {
+    try {
+      if (!latestMyPost?.id) {
+        Alert.alert("Error", "キャンセルする投稿がありません");
+        return;
+      }
+
+      Alert.alert(
+        "投稿をキャンセルしますか？",
+        "キャンセルすると、相手の通知画面からこの相談が消えます。",
+        [
+          {
+            text: "やめる",
+            style: "cancel",
+          },
+          {
+            text: "キャンセルする",
+            style: "destructive",
+            onPress: async () => {
+              await updateDoc(doc(db, "requests", latestMyPost.id), {
+                status: "cancelled",
+                cancelledAt: serverTimestamp(),
+              });
+
+              setLatestMyPost(null);
+              setRequestResponses([]);
+
+              Alert.alert("キャンセルしました", "投稿を取り消しました");
+            },
+          },
+        ]
+      );
     } catch (error) {
       Alert.alert("Error", error.message);
     }
@@ -169,33 +381,38 @@ export default function Seniors() {
     return statusKey === activeFilter;
   });
 
+  const filteredRequestResponses =
+    activeFilter === "all"
+      ? requestResponses
+      : requestResponses.filter(
+          (req) => timingToFilter(req.timing) === activeFilter
+        );
+
   const myStatusKey = normalizeStatus(myData?.status);
   const myStatusStyle = STATUS[myStatusKey] || STATUS.now;
 
   const myImage = getProfileImage(myData);
-  const canShowMyImage = isImageUri(myImage);
 
   return (
     <View style={styles.container}>
-      {/* 自分のステータスバー */}
       <TouchableOpacity
         style={[styles.myStatus, { backgroundColor: myStatusStyle.bg }]}
         activeOpacity={0.8}
         onPress={openStatusMenu}
       >
-        <View style={styles.myAvatar}>
-          {canShowMyImage ? (
-            <Image
-              source={{ uri: myImage }}
-              style={styles.myAvatarImage}
-              resizeMode="cover"
-            />
-          ) : (
-            <Text style={styles.myAvatarText}>
-              {myData?.name?.charAt(0) || "自"}
-            </Text>
-          )}
-        </View>
+        <AvatarCircle
+          imageUrl={myImage}
+          name={myData?.name || "自"}
+          size={64}
+          bg="#5B8DB8"
+          imageError={imageErrors[myData?.id || "me"]}
+          onImageError={() => {
+            setImageErrors((prev) => ({
+              ...prev,
+              [myData?.id || "me"]: true,
+            }));
+          }}
+        />
 
         <View style={styles.myStatusText}>
           <Text style={styles.myStatusLabel}>今のあなたは？？</Text>
@@ -207,7 +424,39 @@ export default function Seniors() {
         <Text style={[styles.chevron, { color: myStatusStyle.text }]}>∨</Text>
       </TouchableOpacity>
 
-      {/* フィルタータブ */}
+      <View style={styles.topTabs}>
+        <TouchableOpacity
+          style={[styles.topTabButton, topTab === "all" && styles.topTabActive]}
+          onPress={() => setTopTab("all")}
+        >
+          <Text
+            style={[
+              styles.topTabText,
+              topTab === "all" && styles.topTabTextActive,
+            ]}
+          >
+            全体
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.topTabButton,
+            topTab === "request" && styles.topTabActive,
+          ]}
+          onPress={() => setTopTab("request")}
+        >
+          <Text
+            style={[
+              styles.topTabText,
+              topTab === "request" && styles.topTabTextActive,
+            ]}
+          >
+            リクエスト
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.filters}>
         {FILTERS.map((filter) => {
           const isActive = activeFilter === filter.value;
@@ -234,81 +483,194 @@ export default function Seniors() {
         })}
       </View>
 
-      <Text style={styles.hint}>声をかけたい人をクリックしてください</Text>
+      {topTab === "all" ? (
+        <Text style={styles.hint}>
+          今相談できる人を選んで、個人的に相談できます
+        </Text>
+      ) : (
+        <Text style={styles.hint}>
+          最新の投稿に回答してくれた人です
+        </Text>
+      )}
 
-      {/* ユーザーグリッド */}
+      {topTab === "request" && (
+        <PostSummaryCard post={latestMyPost} onCancel={cancelLatestPost} />
+      )}
+
       <ScrollView contentContainerStyle={styles.grid}>
-        {filteredUsers.map((user) => {
-          const statusKey = normalizeStatus(user.status);
-          const statusStyle = STATUS[statusKey] || STATUS.now;
+        {topTab === "all" &&
+          filteredUsers.map((user) => {
+            const statusKey = normalizeStatus(user.status);
+            const statusStyle = STATUS[statusKey] || STATUS.now;
 
-          const userName = user.name || "名前なし";
-          const displayName = user.grade
-            ? `${userName}(${user.grade})`
-            : userName;
+            const userName = user.name || "名前なし";
+            const displayName = user.grade
+              ? `${userName}(${user.grade})`
+              : userName;
 
-          const userImage = getProfileImage(user);
-          const canShowUserImage = isImageUri(userImage);
+            const userImage = getProfileImage(user);
+            const userImageError = imageErrors[user.id];
 
-          return (
-            <TouchableOpacity
-              key={user.id}
-              style={styles.card}
-              activeOpacity={0.8}
-              onPress={() =>
-                router.push({
-                  pathname: "/senior-detail",
-                  params: {
-                    userId: user.id,
-                    name: displayName,
-                    status: statusStyle.label,
-                    avatar: userName.charAt(0),
-                    imageUrl: userImage,
-                    tags: user.tags?.join(",") || "",
-                  },
-                })
-              }
-            >
-              <View style={styles.avatar}>
-                {canShowUserImage ? (
-                  <Image
-                    source={{ uri: userImage }}
-                    style={styles.avatarImage}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <Text style={styles.avatarText}>{userName.charAt(0)}</Text>
-                )}
-              </View>
-
-              <Text style={styles.name}>{displayName}</Text>
-
-              <View
-                style={[
-                  styles.badge,
-                  {
-                    backgroundColor: statusStyle.bg,
-                  },
-                ]}
+            return (
+              <TouchableOpacity
+                key={user.id}
+                style={styles.card}
+                activeOpacity={0.8}
+                onPress={() =>
+                  router.push({
+                    pathname: "/senior-detail",
+                    params: {
+                      userId: user.id,
+                      name: displayName,
+                      status: statusStyle.label,
+                      avatar: userName.charAt(0),
+                      imageUrl: userImage,
+                      tags: user.tags?.join(",") || "",
+                    },
+                  })
+                }
               >
-                <Text
+                <AvatarCircle
+                  imageUrl={userImage}
+                  name={userName}
+                  size={86}
+                  bg="#FFD966"
+                  imageError={userImageError}
+                  onImageError={() => {
+                    setImageErrors((prev) => ({
+                      ...prev,
+                      [user.id]: true,
+                    }));
+                  }}
+                />
+
+                <Text style={styles.name}>{displayName}</Text>
+
+                <View
                   style={[
-                    styles.badgeText,
+                    styles.badge,
                     {
-                      color: statusStyle.text,
+                      backgroundColor: statusStyle.bg,
                     },
                   ]}
                 >
-                  {statusStyle.label}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+                  <Text
+                    style={[
+                      styles.badgeText,
+                      {
+                        color: statusStyle.text,
+                      },
+                    ]}
+                  >
+                    {statusStyle.label}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
 
-        {filteredUsers.length === 0 && (
+        {topTab === "request" &&
+          filteredRequestResponses.map((req) => {
+            const responderName = req.respondedByName || "名前なし";
+            const responderGrade = req.respondedByGrade || "";
+            const responderImage = getProfileImage(req);
+            const responderImageError = imageErrors[req.id];
+
+            const timingKey = timingToFilter(req.timing);
+            const timingStyle = STATUS[timingKey] || STATUS.now;
+
+            const alreadyThanks = req.thanksSent === true;
+
+            return (
+              <TouchableOpacity
+                key={req.id}
+                style={styles.card}
+                activeOpacity={0.8}
+                onPress={() =>
+                  router.push({
+                    pathname: "/request-detail",
+                    params: {
+                      id: req.id,
+                      name: responderName,
+                      timing: req.timing || "",
+                      talkTags: req.talkTags?.join(",") || "",
+                      feelTag: req.feelTag || "",
+                      detail: req.detail || "",
+                      imageUrl: responderImage || "",
+                    },
+                  })
+                }
+              >
+                <AvatarCircle
+                  imageUrl={responderImage}
+                  name={responderName}
+                  size={86}
+                  bg="#FFD966"
+                  imageError={responderImageError}
+                  onImageError={() => {
+                    setImageErrors((prev) => ({
+                      ...prev,
+                      [req.id]: true,
+                    }));
+                  }}
+                />
+
+                <Text style={styles.name}>
+                  {responderName}
+                  {responderGrade ? `(${responderGrade})` : ""}
+                </Text>
+
+                <View
+                  style={[
+                    styles.badge,
+                    {
+                      backgroundColor: alreadyThanks
+                        ? "#E8E8E8"
+                        : timingStyle.bg,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.badgeText,
+                      {
+                        color: alreadyThanks ? "#777" : timingStyle.text,
+                      },
+                    ]}
+                  >
+                    {alreadyThanks ? "ありがとう済み" : req.timing || "回答あり"}
+                  </Text>
+                </View>
+
+                <Text style={styles.smallText} numberOfLines={2}>
+                  {req.talkTags?.join("・") || "相談内容"}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+
+        {topTab === "all" && filteredUsers.length === 0 && (
           <View style={styles.emptyBox}>
             <Text style={styles.emptyText}>該当するユーザーがいません</Text>
+          </View>
+        )}
+
+        {topTab === "request" &&
+          latestMyPost &&
+          filteredRequestResponses.length === 0 && (
+            <View style={styles.emptyBox}>
+              <Text style={styles.emptyText}>
+                まだこの投稿に回答してくれた人はいません
+              </Text>
+            </View>
+          )}
+
+        {topTab === "request" && !latestMyPost && (
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyText}>まだ投稿がありません</Text>
+            <Text style={styles.emptySubText}>
+              投稿タブから相談を投稿すると、ここに表示されます
+            </Text>
           </View>
         )}
       </ScrollView>
@@ -334,25 +696,13 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
-  myAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#5B8DB8",
+  avatarBase: {
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
 
-  myAvatarImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-  },
-
-  myAvatarText: {
-    color: "white",
-    fontSize: 24,
+  avatarText: {
     fontWeight: "700",
   },
 
@@ -375,6 +725,36 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  topTabs: {
+    flexDirection: "row",
+    backgroundColor: "#E8E4DA",
+    marginHorizontal: 16,
+    borderRadius: 999,
+    padding: 4,
+    marginBottom: 12,
+  },
+
+  topTabButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 999,
+    alignItems: "center",
+  },
+
+  topTabActive: {
+    backgroundColor: "white",
+  },
+
+  topTabText: {
+    fontSize: 15,
+    color: "#777",
+    fontWeight: "700",
+  },
+
+  topTabTextActive: {
+    color: "#111",
+  },
+
   filters: {
     flexDirection: "row",
     paddingHorizontal: 16,
@@ -383,7 +763,7 @@ const styles = StyleSheet.create({
   },
 
   filterBtn: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 24,
     backgroundColor: "#E8E4DA",
@@ -392,7 +772,7 @@ const styles = StyleSheet.create({
   },
 
   filterText: {
-    fontSize: 15,
+    fontSize: 14,
     color: "#555",
     fontWeight: "700",
   },
@@ -406,8 +786,107 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#999",
     textAlign: "center",
-    marginTop: 10,
+    marginTop: 8,
     marginBottom: 18,
+    paddingHorizontal: 16,
+  },
+
+  postSummaryCard: {
+    backgroundColor: "white",
+    marginHorizontal: 16,
+    marginBottom: 18,
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+
+  summaryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginBottom: 10,
+    gap: 6,
+  },
+
+  summaryDot: {
+    color: "#FFD966",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  summaryTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111",
+  },
+
+  summaryTags: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    flex: 1,
+  },
+
+  summaryTagYellow: {
+    backgroundColor: "#E8C75A",
+    color: "white",
+    fontSize: 12,
+    fontWeight: "700",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+
+  summaryTagGray: {
+    backgroundColor: "#BDBDBD",
+    color: "white",
+    fontSize: 12,
+    fontWeight: "700",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+
+  summaryEmpty: {
+    color: "#999",
+    fontSize: 12,
+  },
+
+  summaryDetailBox: {
+    marginTop: 2,
+  },
+
+  summaryDetailTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 4,
+  },
+
+  summaryDetailText: {
+    fontSize: 13,
+    color: "#333",
+    lineHeight: 19,
+    paddingLeft: 20,
+  },
+
+  cancelButton: {
+    marginTop: 16,
+    alignSelf: "center",
+    backgroundColor: "#E0E0E0",
+    paddingHorizontal: 48,
+    paddingVertical: 12,
+    borderRadius: 999,
+  },
+
+  cancelButtonText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111",
   },
 
   grid: {
@@ -425,7 +904,7 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: "center",
     gap: 10,
-    minHeight: 195,
+    minHeight: 205,
     shadowColor: "#000",
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -433,30 +912,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
-  avatar: {
-    width: 86,
-    height: 86,
-    borderRadius: 43,
-    backgroundColor: "#FFD966",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-
-  avatarImage: {
-    width: 86,
-    height: 86,
-    borderRadius: 43,
-  },
-
-  avatarText: {
-    fontSize: 36,
-    fontWeight: "700",
-    color: "#111",
-  },
-
   name: {
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: "700",
     color: "#1A1A1A",
     textAlign: "center",
@@ -473,14 +930,32 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  smallText: {
+    fontSize: 12,
+    color: "#999",
+    textAlign: "center",
+    lineHeight: 16,
+  },
+
   emptyBox: {
     width: "100%",
     paddingTop: 40,
     alignItems: "center",
+    paddingHorizontal: 24,
   },
 
   emptyText: {
     color: "#999",
     fontSize: 14,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+
+  emptySubText: {
+    color: "#AAA",
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 8,
+    lineHeight: 18,
   },
 });
