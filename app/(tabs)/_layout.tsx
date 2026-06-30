@@ -7,16 +7,16 @@ import {
   Bell,
 } from "@tamagui/lucide-icons-2";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, doc, getDoc, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, Unsubscribe } from "firebase/firestore";
 import { auth, db } from "../../lib/firebase";
 
 export default function TabLayout() {
   const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
-    let unsubscribeRequests = null;
+    let unsubscribeRequests: Unsubscribe | null = null;
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (unsubscribeRequests) {
         unsubscribeRequests();
         unsubscribeRequests = null;
@@ -27,62 +27,57 @@ export default function TabLayout() {
         return;
       }
 
-      let myGroupId = "test";
+      unsubscribeRequests = onSnapshot(
+        collection(db, "requests"),
+        (snapshot) => {
+          let count = 0;
 
-      try {
-        const mySnap = await getDoc(doc(db, "users", user.uid));
+          snapshot.forEach((d) => {
+            const data = d.data();
 
-        if (mySnap.exists()) {
-          myGroupId = mySnap.data().groupId || "test";
+            if (data.status === "cancelled") return;
+
+            const repliedToMyPost =
+              data.fromUid === user.uid &&
+              data.status === "responded" &&
+              !data.thanksSent;
+
+            const directWaitingForMe =
+              data.type === "direct" &&
+              data.toUid === user.uid &&
+              data.fromUid !== user.uid &&
+              data.status === "waiting" &&
+              !data.respondedBy;
+
+            const groupWaitingForMe =
+              data.type === "group" &&
+              data.fromUid !== user.uid &&
+              data.status === "waiting" &&
+              !data.respondedBy;
+
+            const thanksForMe =
+              data.respondedBy === user.uid &&
+              data.status === "matched" &&
+              data.thanksSent === true &&
+              data.thanksSeenByResponder !== true;
+
+            if (
+              repliedToMyPost ||
+              directWaitingForMe ||
+              groupWaitingForMe ||
+              thanksForMe
+            ) {
+              count += 1;
+            }
+          });
+
+          setNotificationCount(count);
+        },
+        (error) => {
+          console.log("notification badge error:", error);
+          setNotificationCount(0);
         }
-      } catch (error) {
-        console.log("groupId error:", error.message);
-      }
-
-      unsubscribeRequests = onSnapshot(collection(db, "requests"), (snapshot) => {
-        let count = 0;
-
-        snapshot.forEach((d) => {
-          const data = d.data();
-
-          if (data.status === "cancelled") return;
-
-          const repliedToMyPost =
-            data.fromUid === user.uid &&
-            data.status === "responded" &&
-            !data.thanksSent;
-
-          const directWaitingForMe =
-            data.type === "direct" &&
-            data.toUid === user.uid &&
-            data.fromUid !== user.uid &&
-            data.status === "waiting" &&
-            !data.respondedBy;
-
-          const groupWaitingForMe =
-  data.type === "group" &&
-  data.fromUid !== user.uid &&
-  data.status === "waiting" &&
-  !data.respondedBy;
-
-          const thanksForMe =
-            data.respondedBy === user.uid &&
-            data.status === "matched" &&
-            data.thanksSent &&
-            data.thanksSeenByResponder !== true;
-
-          if (
-            repliedToMyPost ||
-            directWaitingForMe ||
-            groupWaitingForMe ||
-            thanksForMe
-          ) {
-            count += 1;
-          }
-        });
-
-        setNotificationCount(count);
-      });
+      );
     });
 
     return () => {
