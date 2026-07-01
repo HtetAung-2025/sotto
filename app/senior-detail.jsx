@@ -231,11 +231,6 @@ export default function SeniorDetail() {
         return;
       }
 
-      if (!feelTag) {
-        Alert.alert("自分の状態を選択してください");
-        return;
-      }
-
       const mySnap = await getDoc(doc(db, "users", user.uid));
       const myData = mySnap.exists() ? mySnap.data() : {};
 
@@ -387,30 +382,6 @@ export default function SeniorDetail() {
                     borderColor="#CCC"
                     color={talkTags.includes(tag) ? "white" : "#999"}
                     onPress={() => toggleTalkTag(tag)}
-                  >
-                    {tag}
-                  </Button>
-                ))}
-              </XStack>
-            </YStack>
-
-            <YStack gap="$2">
-              <Text fontWeight="700">
-                🟡 自分の状態
-                <Text fontSize={11}> ※1つまで選択することができます。</Text>
-              </Text>
-
-              <XStack flexWrap="wrap" gap="$2">
-                {FEEL_TAGS.map((tag) => (
-                  <Button
-                    key={tag}
-                    size="$2"
-                    borderRadius="$10"
-                    backgroundColor={feelTag === tag ? "#E8C75A" : "white"}
-                    borderWidth={1}
-                    borderColor="#CCC"
-                    color={feelTag === tag ? "white" : "#999"}
-                    onPress={() => setFeelTag(tag)}
                   >
                     {tag}
                   </Button>

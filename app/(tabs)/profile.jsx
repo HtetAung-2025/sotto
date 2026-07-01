@@ -160,6 +160,40 @@ export default function SettingsScreen() {
         ) : null}
       </YStack>
 
+      <YStack
+        width="80%"
+        backgroundColor="white"
+        borderRadius="$5"
+        padding="$4"
+        gap="$3"
+        borderWidth={1}
+        borderColor="#DDD"
+      >
+        <Text fontSize={18} fontWeight="700">
+          得意なこと
+        </Text>
+
+        <XStack flexWrap="wrap" gap="$2">
+          {profile?.tags?.length > 0 ? (
+            profile.tags.map((tag) => (
+              <Text
+                key={tag}
+                backgroundColor="#FFF0C2"
+                color="#B8860B"
+                paddingHorizontal="$2"
+                paddingVertical="$1"
+                borderRadius="$10"
+                fontSize={13}
+              >
+                {tag}
+              </Text>
+            ))
+          ) : (
+            <Text color="#999">未設定</Text>
+          )}
+        </XStack>
+      </YStack>
+
       <YStack width="80%" gap="$3">
         <Button
           height={54}
@@ -216,40 +250,6 @@ export default function SettingsScreen() {
           </Text>
 
           <Switch value={notificationOn} onValueChange={toggleNotification} />
-        </XStack>
-      </YStack>
-
-      <YStack
-        width="80%"
-        backgroundColor="white"
-        borderRadius="$5"
-        padding="$4"
-        gap="$3"
-        borderWidth={1}
-        borderColor="#DDD"
-      >
-        <Text fontSize={18} fontWeight="700">
-          得意なこと
-        </Text>
-
-        <XStack flexWrap="wrap" gap="$2">
-          {profile?.tags?.length > 0 ? (
-            profile.tags.map((tag) => (
-              <Text
-                key={tag}
-                backgroundColor="#FFF0C2"
-                color="#B8860B"
-                paddingHorizontal="$2"
-                paddingVertical="$1"
-                borderRadius="$10"
-                fontSize={13}
-              >
-                {tag}
-              </Text>
-            ))
-          ) : (
-            <Text color="#999">未設定</Text>
-          )}
         </XStack>
       </YStack>
 

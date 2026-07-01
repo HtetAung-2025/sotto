@@ -151,11 +151,6 @@ export default function Reservations() {
         return;
       }
 
-      if (!feelTag) {
-        Alert.alert("自分の状態を選択してください");
-        return;
-      }
-
       setPosting(true);
 
       let latestMyData = myData;
@@ -284,41 +279,6 @@ export default function Reservations() {
               </XStack>
             </YStack>
 
-            <YStack gap="$2">
-              <Text fontWeight="700">
-                🟡 自分の状態
-                <Text fontSize={11}> ※1つまで選択できます。</Text>
-              </Text>
-
-              <XStack flexWrap="wrap" gap="$2">
-                {FEEL_TAGS.map((tag) => (
-                  <Button
-                    key={tag}
-                    size="$2"
-                    borderRadius="$10"
-                    backgroundColor={feelTag === tag ? "#BDBDBD" : "white"}
-                    borderWidth={1}
-                    borderColor="#CCC"
-                    color={feelTag === tag ? "white" : "#999"}
-                    onPress={() => setFeelTag(tag)}
-                  >
-                    {tag}
-                  </Button>
-                ))}
-              </XStack>
-            </YStack>
-
-            <YStack gap="$2">
-              <Text fontWeight="700">🟡 話したいこと詳細記入</Text>
-
-              <Input
-                height={48}
-                placeholder="話したいことの詳細を記入してください"
-                value={detail}
-                onChangeText={setDetail}
-                backgroundColor="white"
-              />
-            </YStack>
           </Card>
 
           <Button

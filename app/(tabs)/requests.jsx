@@ -157,24 +157,6 @@ function PostSummaryCard({ post, onCancel }) {
         </View>
       </View>
 
-      <View style={styles.summaryRow}>
-        <Text style={styles.summaryDot}>●</Text>
-        <Text style={styles.summaryTitle}>自分の状態</Text>
-
-        <Text style={styles.summaryTagGray}>{post.feelTag || "未選択"}</Text>
-      </View>
-
-      <View style={styles.summaryDetailBox}>
-        <View style={styles.summaryDetailTitleRow}>
-          <Text style={styles.summaryDot}>●</Text>
-          <Text style={styles.summaryTitle}>話したいこと詳細記入</Text>
-        </View>
-
-        <Text style={styles.summaryDetailText}>
-          {post.detail || "詳細はまだ入力されていません。"}
-        </Text>
-      </View>
-
       {canCancel && (
         <TouchableOpacity
           style={styles.cancelButton}

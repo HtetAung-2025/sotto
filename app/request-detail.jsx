@@ -344,22 +344,6 @@ export default function RequestDetail() {
             </YStack>
 
             <YStack gap="$2">
-              <Text fontWeight="700">● 自分の状態</Text>
-
-              <Text
-                alignSelf="flex-start"
-                backgroundColor="#BDBDBD"
-                color="white"
-                paddingHorizontal="$2"
-                paddingVertical="$1"
-                borderRadius="$10"
-                fontSize={12}
-              >
-                {feelTag || "未選択"}
-              </Text>
-            </YStack>
-
-            <YStack gap="$2">
               <Text fontWeight="700">● 話したいこと詳細</Text>
 
               <Text fontSize={13} color="#333">
