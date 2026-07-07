@@ -1,39 +1,66 @@
 import { useEffect, useState } from "react";
-import { Tabs } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
 import {
   PlusCircle,
-  UserRound,
-  Settings,
   Bell,
 } from "@tamagui/lucide-icons-2";
+
+import { Image, Pressable, View, Text } from "react-native";
+
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, onSnapshot, Unsubscribe } from "firebase/firestore";
+import {
+  collection,
+  onSnapshot,
+  Unsubscribe,
+  doc,
+} from "firebase/firestore";
+
 import { auth, db } from "../../lib/firebase";
 
 export default function TabLayout() {
+  const router = useRouter();
+
   const [notificationCount, setNotificationCount] = useState(0);
+  const [photoURL, setPhotoURL] = useState("");
 
   useEffect(() => {
     let unsubscribeRequests: Unsubscribe | null = null;
+    let unsubscribeUser: Unsubscribe | null = null;
 
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      if (unsubscribeRequests) {
-        unsubscribeRequests();
-        unsubscribeRequests = null;
-      }
+      if (unsubscribeRequests) unsubscribeRequests();
+      if (unsubscribeUser) unsubscribeUser();
 
       if (!user) {
         setNotificationCount(0);
+        setPhotoURL("");
         return;
       }
 
+      // プロフィール画像取得
+      unsubscribeUser = onSnapshot(doc(db, "users", user.uid), (snap) => {
+        if (!snap.exists()) return;
+
+        const data = snap.data();
+
+        setPhotoURL(
+          data.photoURL ||
+            data.profileImageUrl ||
+            data.profileImage ||
+            data.imageUrl ||
+            data.avatarUrl ||
+            ""
+        );
+      });
+
+      // 通知バッジ
       unsubscribeRequests = onSnapshot(
         collection(db, "requests"),
         (snapshot) => {
           let count = 0;
 
-          snapshot.forEach((d) => {
-            const data = d.data();
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
 
             if (data.status === "cancelled") return;
 
@@ -58,8 +85,8 @@ export default function TabLayout() {
             const thanksForMe =
               data.respondedBy === user.uid &&
               data.status === "matched" &&
-              data.thanksSent === true &&
-              data.thanksSeenByResponder !== true;
+              data.thanksSent &&
+              !data.thanksSeenByResponder;
 
             if (
               repliedToMyPost ||
@@ -67,24 +94,18 @@ export default function TabLayout() {
               groupWaitingForMe ||
               thanksForMe
             ) {
-              count += 1;
+              count++;
             }
           });
 
           setNotificationCount(count);
-        },
-        (error) => {
-          console.log("notification badge error:", error);
-          setNotificationCount(0);
         }
       );
     });
 
     return () => {
-      if (unsubscribeRequests) {
-        unsubscribeRequests();
-      }
-
+      if (unsubscribeRequests) unsubscribeRequests();
+      if (unsubscribeUser) unsubscribeUser();
       unsubscribeAuth();
     };
   }, []);
@@ -100,14 +121,63 @@ export default function TabLayout() {
     <Tabs
       initialRouteName="reservations"
       screenOptions={{
-        headerShown: false,
+        headerShown: true,
+        headerTitleAlign: "center",
+        headerStyle: {height: 110},
+        headerRight: () => (
+          <Pressable
+            onPress={() => router.push("/profile")}
+            style={{
+              marginRight: 16,
+              marginBottom: 4,
+            }}
+          >
+            {photoURL ? (
+              <Image
+                source={{ uri: photoURL }}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  borderColor: "#DDD",
+                }}
+              />
+            ) : (
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: "#FFD966",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: "#DDD",
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 18,
+                    fontWeight: "700",
+                    color: "#333",
+                  }}
+                >
+                  ?
+                </Text>
+              </View>
+            )}
+          </Pressable>
+        ),
+
         tabBarActiveTintColor: "#FFD966",
         tabBarInactiveTintColor: "#999",
+
         tabBarStyle: {
           height: 80,
           paddingBottom: 12,
           paddingTop: 8,
-          backgroundColor: "white",
+          backgroundColor: "#fff",
         },
       }}
     >
@@ -115,15 +185,9 @@ export default function TabLayout() {
         name="reservations"
         options={{
           title: "投稿",
-          tabBarIcon: ({ color }) => <PlusCircle color={color} size={26} />,
-        }}
-      />
-
-      <Tabs.Screen
-        name="requests"
-        options={{
-          title: "出会う",
-          tabBarIcon: ({ color }) => <UserRound color={color} size={24} />,
+          tabBarIcon: ({ color }) => (
+            <PlusCircle color={color} size={26} />
+          ),
         }}
       />
 
@@ -131,11 +195,13 @@ export default function TabLayout() {
         name="notifications"
         options={{
           title: "通知",
-          tabBarIcon: ({ color }) => <Bell color={color} size={24} />,
+          tabBarIcon: ({ color }) => (
+            <Bell color={color} size={24} />
+          ),
           tabBarBadge: badge,
           tabBarBadgeStyle: {
             backgroundColor: "#E35A5A",
-            color: "white",
+            color: "#fff",
             fontSize: 11,
             fontWeight: "700",
             minWidth: 18,
@@ -148,8 +214,16 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "設定",
-          tabBarIcon: ({ color }) => <Settings color={color} size={24} />,
+          href: null,
+          title: "プロフィール",
+          headerRight: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="requests"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

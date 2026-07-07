@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, ScrollView } from "react-native";
+import { router } from "expo-router";
 import { YStack, XStack, Text, Button, Input, Card } from "tamagui";
 import {
   collection,
@@ -211,9 +212,12 @@ export default function Reservations() {
 
       resetForm();
 
+      // 投稿完了 → リクエスト画面へ遷移
+      router.push("/(tabs)/requests");
+
       Alert.alert(
         "投稿しました",
-        "全員に通知しました。\n回答してくれた人は「出会う ＞ リクエスト」に表示されます。"
+        "全員に通知しました。\n回答してくれた人は下に表示されます。"
       );
     } catch (error) {
       console.log("handlePost error:", error.message);
@@ -236,13 +240,13 @@ export default function Reservations() {
         <YStack gap="$4">
           <YStack gap="$2" paddingHorizontal="$2">
             <Text fontSize={28} fontWeight="800" color="#222">
-              投稿
+             使い手順
             </Text>
 
             <Text fontSize={14} color="#777" lineHeight={21}>
               相談したい内容を全体に投稿します。
               {"\n"}
-              回答してくれた人は「出会う ＞ リクエスト」に表示されます。
+              回答してくれた人はこの画面の下に表示されます。
             </Text>
           </YStack>
 
@@ -278,7 +282,6 @@ export default function Reservations() {
                 ))}
               </XStack>
             </YStack>
-
           </Card>
 
           <Button
@@ -300,7 +303,7 @@ export default function Reservations() {
           <Text textAlign="center" color="#AAA" fontSize={12} lineHeight={18}>
             投稿後、全員に通知が届きます。
             {"\n"}
-            回答者は「出会う」のリクエストに表示されます。
+            回答してくれた人はこの下に表示されます。
           </Text>
         </YStack>
       </ScrollView>

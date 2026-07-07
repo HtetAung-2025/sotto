@@ -388,9 +388,6 @@ export default function NotificationsScreen() {
         paddingBottom: 120,
       }}
     >
-      <Text fontSize={28} fontWeight="700" marginBottom="$4">
-        通知
-      </Text>
 
       {/* 自分への返事 */}
       {respondedRequests.length > 0 && (

@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Alert, Switch, Image } from "react-native";
+import { Alert, Switch, Image, ScrollView } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { YStack, H1, Text, Button, XStack, Circle } from "tamagui";
 import { signOut } from "firebase/auth";
@@ -110,161 +110,166 @@ export default function SettingsScreen() {
   const canShowImage = isImageUri(profileImage) && !imageError;
 
   return (
-    <YStack
-      flex={1}
-      backgroundColor="#F7F2EA"
-      alignItems="center"
-      paddingTop={80}
-      gap="$5"
-    >
-      <H1 fontSize={28}>設定</H1>
-
-      <Circle
-        size={100}
-        backgroundColor="#FFD966"
-        overflow="hidden"
-        alignItems="center"
-        justifyContent="center"
+    <YStack flex={1} backgroundColor="#F7F2EA">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          alignItems: "center",
+          paddingTop: 80,
+          paddingBottom: 100,
+        }}
       >
-        {canShowImage ? (
-          <Image
-            source={{ uri: profileImage }}
-            style={{
-              width: 100,
-              height: 100,
-              borderRadius: 50,
-            }}
-            resizeMode="cover"
-            onError={() => setImageError(true)}
-          />
-        ) : (
-          <Text fontSize={40} fontWeight="700" color="#1A1A1A">
-            {profile?.name?.charAt(0) || "?"}
-          </Text>
-        )}
-      </Circle>
+        <YStack alignItems="center" gap="$5" width="100%">
+          <H1 fontSize={28}>設定</H1>
 
-      <YStack alignItems="center" gap="$1">
-        <Text fontSize={24} fontWeight="700" color="#111">
-          {profile?.name || "名前なし"}
-        </Text>
-
-        <Text fontSize={18} color="#999">
-          {profile?.grade || ""}
-        </Text>
-
-        {profile?.groupName ? (
-          <Text fontSize={13} color="#999" marginTop="$1">
-            グループ：{profile.groupName}
-          </Text>
-        ) : null}
-      </YStack>
-
-      <YStack
-        width="80%"
-        backgroundColor="white"
-        borderRadius="$5"
-        padding="$4"
-        gap="$3"
-        borderWidth={1}
-        borderColor="#DDD"
-      >
-        <Text fontSize={18} fontWeight="700">
-          得意なこと
-        </Text>
-
-        <XStack flexWrap="wrap" gap="$2">
-          {profile?.tags?.length > 0 ? (
-            profile.tags.map((tag) => (
-              <Text
-                key={tag}
-                backgroundColor="#FFF0C2"
-                color="#B8860B"
-                paddingHorizontal="$2"
-                paddingVertical="$1"
-                borderRadius="$10"
-                fontSize={13}
-              >
-                {tag}
+          <Circle
+            size={100}
+            backgroundColor="#FFD966"
+            overflow="hidden"
+            alignItems="center"
+            justifyContent="center"
+          >
+            {canShowImage ? (
+              <Image
+                source={{ uri: profileImage }}
+                style={{
+                  width: 100,
+                  height: 100,
+                  borderRadius: 50,
+                }}
+                resizeMode="cover"
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <Text fontSize={40} fontWeight="700" color="#1A1A1A">
+                {profile?.name?.charAt(0) || "?"}
               </Text>
-            ))
-          ) : (
-            <Text color="#999">未設定</Text>
-          )}
-        </XStack>
-      </YStack>
+            )}
+          </Circle>
 
-      <YStack width="80%" gap="$3">
-        <Button
-          height={54}
-          borderRadius="$5"
-          backgroundColor="white"
-          color="black"
-          fontSize={18}
-          fontWeight="700"
-          borderWidth={1}
-          borderColor="#DDD"
-          onPress={() =>
-            router.push({
-              pathname: "/profile-setup",
-              params: {
-                from: "settings",
-              },
-            })
-          }
-        >
-          プロフィールを編集する 〉
-        </Button>
+          <YStack alignItems="center" gap="$1">
+            <Text fontSize={24} fontWeight="700" color="#111">
+              {profile?.name || "名前なし"}
+            </Text>
 
-        <Button
-          height={54}
-          borderRadius="$5"
-          backgroundColor="white"
-          color="black"
-          fontSize={18}
-          fontWeight="700"
-          borderWidth={1}
-          borderColor="#DDD"
-          onPress={() => router.push("/group")}
-        >
-          グループを変更する 〉
-        </Button>
-      </YStack>
+            <Text fontSize={18} color="#999">
+              {profile?.grade || ""}
+            </Text>
 
-      <YStack
-        width="80%"
-        backgroundColor="white"
-        borderRadius="$5"
-        padding="$4"
-        gap="$3"
-        borderWidth={1}
-        borderColor="#DDD"
-      >
-        <Text fontSize={18} fontWeight="700">
-          通知設定
-        </Text>
+            {profile?.groupName ? (
+              <Text fontSize={13} color="#999" marginTop="$1">
+                グループ：{profile.groupName}
+              </Text>
+            ) : null}
+          </YStack>
 
-        <XStack alignItems="center" justifyContent="space-between">
-          <Text fontSize={16} color="#555">
-            プッシュ通知
-          </Text>
+          <YStack
+            width="80%"
+            backgroundColor="white"
+            borderRadius="$5"
+            padding="$4"
+            gap="$3"
+            borderWidth={1}
+            borderColor="#DDD"
+          >
+            <Text fontSize={18} fontWeight="700">
+              得意なこと
+            </Text>
 
-          <Switch value={notificationOn} onValueChange={toggleNotification} />
-        </XStack>
-      </YStack>
+            <XStack flexWrap="wrap" gap="$2">
+              {profile?.tags?.length > 0 ? (
+                profile.tags.map((tag) => (
+                  <Text
+                    key={tag}
+                    backgroundColor="#FFF0C2"
+                    color="#B8860B"
+                    paddingHorizontal="$2"
+                    paddingVertical="$1"
+                    borderRadius="$10"
+                    fontSize={13}
+                  >
+                    {tag}
+                  </Text>
+                ))
+              ) : (
+                <Text color="#999">未設定</Text>
+              )}
+            </XStack>
+          </YStack>
 
-      <Button
-        width="80%"
-        height={58}
-        borderRadius="$10"
-        backgroundColor="#FFD966"
-        color="black"
-        fontSize={20}
-        fontWeight="700"
-        onPress={handleLogout}
-      >
-        ログアウト
-      </Button>
+          <YStack width="80%" gap="$3">
+            <Button
+              height={54}
+              borderRadius="$5"
+              backgroundColor="white"
+              color="black"
+              fontSize={18}
+              fontWeight="700"
+              borderWidth={1}
+              borderColor="#DDD"
+              onPress={() =>
+                router.push({
+                  pathname: "/profile-setup",
+                  params: {
+                    from: "settings",
+                  },
+                })
+              }
+            >
+              プロフィールを編集する 〉
+            </Button>
+
+            <Button
+              height={54}
+              borderRadius="$5"
+              backgroundColor="white"
+              color="black"
+              fontSize={18}
+              fontWeight="700"
+              borderWidth={1}
+              borderColor="#DDD"
+              onPress={() => router.push("/group")}
+            >
+              グループを変更する 〉
+            </Button>
+          </YStack>
+
+          <YStack
+            width="80%"
+            backgroundColor="white"
+            borderRadius="$5"
+            padding="$4"
+            gap="$3"
+            borderWidth={1}
+            borderColor="#DDD"
+          >
+            <Text fontSize={18} fontWeight="700">
+              通知設定
+            </Text>
+
+            <XStack alignItems="center" justifyContent="space-between">
+              <Text fontSize={16} color="#555">
+                プッシュ通知
+              </Text>
+
+              <Switch value={notificationOn} onValueChange={toggleNotification} />
+            </XStack>
+          </YStack>
+
+          <Button
+            width="80%"
+            height={58}
+            borderRadius="$10"
+            backgroundColor="#FFD966"
+            color="black"
+            fontSize={20}
+            fontWeight="700"
+            onPress={handleLogout}
+          >
+            ログアウト
+          </Button>
+        </YStack>
+      </ScrollView>
     </YStack>
   );
 }
