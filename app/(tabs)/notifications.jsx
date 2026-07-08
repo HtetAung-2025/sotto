@@ -568,7 +568,7 @@ export default function NotificationsScreen() {
                     ))}
                   </XStack>
 
-                  <XStack gap="$2" alignItems="center">
+                  {/* <XStack gap="$2" alignItems="center">
                     <Text fontSize={13} color="#777">
                       状態:
                     </Text>
@@ -582,9 +582,9 @@ export default function NotificationsScreen() {
                     >
                       {req.feelTag}
                     </Text>
-                  </XStack>
+                  </XStack> */}
 
-                  {req.status === "matched" ? (
+                  {/* {req.status === "matched" ? (
                     <YStack gap="$2" marginTop="$1">
                       <YStack
                         backgroundColor="#E6FBF5"
@@ -616,7 +616,7 @@ export default function NotificationsScreen() {
                         </Text>
                       </YStack>
                     </YStack>
-                  ) : null}
+                  ) : null} */}
                 </YStack>
               </Card>
             );

@@ -224,6 +224,7 @@ export default function TabLayout() {
         name="requests"
         options={{
           href: null,
+          title: "リクエスト",
         }}
       />
     </Tabs>
