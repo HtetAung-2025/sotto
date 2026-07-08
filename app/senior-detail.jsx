@@ -389,21 +389,6 @@ export default function SeniorDetail() {
               </XStack>
             </YStack>
 
-            <YStack gap="$2">
-              <Text fontWeight="700">🟡 話したいこと詳細記入</Text>
-
-              <Text fontSize={11}>
-                ※具体的に聞きたいことがあったら自由に記入してください。
-              </Text>
-
-              <Input
-                height={48}
-                placeholder="話したいことの詳細を記入してください"
-                value={detail}
-                onChangeText={setDetail}
-                backgroundColor="white"
-              />
-            </YStack>
           </Card>
 
           <Button

@@ -12,14 +12,14 @@ export default function Group() {
     >
       <YStack alignItems="center" gap="$5">
         <YStack alignItems="center" gap="$3" marginBottom="$8">
-          <Text fontSize={28} fontWeight="800" color="#222">
-            グループを選択
+          <Text fontSize={28} fontWeight="800" color="#000">
+            SOTTOへようこそ！
           </Text>
 
-          <Text fontSize={15} color="#666" textAlign="center" lineHeight={22}>
-            相談する相手を同じグループ内で見つけるために、
+          <Text fontSize={15} color="#000" textAlign="center" lineHeight={22}>
+            「話してみたい」その気持ちを、
             {"\n"}
-            グループを作成するか、既存のグループに参加してください。
+            “会話の0.5歩前”から寄り添うアプリです。
           </Text>
         </YStack>
 
@@ -37,11 +37,8 @@ export default function Group() {
           <XStack alignItems="center" gap="$3">
             <Users color="#FFD966" size={28} />
             <YStack>
-              <Text fontSize={22} fontWeight="700">
+              <Text fontSize={22} fontWeight="600" color="000">
                 グループ作成
-              </Text>
-              <Text fontSize={12} color="#777">
-                新しいグループを作る
               </Text>
             </YStack>
           </XStack>
@@ -61,11 +58,8 @@ export default function Group() {
           <XStack alignItems="center" gap="$3">
             <UserPlus color="#FFD966" size={28} />
             <YStack>
-              <Text fontSize={22} fontWeight="700">
+              <Text fontSize={22} fontWeight="600" color="000">
                 グループ参加
-              </Text>
-              <Text fontSize={12} color="#777">
-                コードを入力して参加する
               </Text>
             </YStack>
           </XStack>

@@ -8,18 +8,14 @@ import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 
 const TAGS = [
-  "企画",
-  "デザイン",
-  "コーディング",
+  "授業・課題",
+  "ソフト・教材",
+  "作品・制作",
+  "プレゼン",
+  "学校生活",
+  "進路・就活",
+  "経験談",
   "雑談",
-  "相談",
-  "課題",
-  "Illustrator",
-  "Photoshop",
-  "HTML CSS",
-  "Figma",
-  "就活",
-  "その他",
 ];
 
 const TOTAL_STEPS = 4;
@@ -216,33 +212,47 @@ export default function ProfileSetup() {
   return (
     <YStack
       flex={1}
-      backgroundColor="#F7F2EA"
-      padding="$5"
+      backgroundColor="#FCF0CD"
       justifyContent="center"
+      alignItems="center"
+      width="100%"
+      overflow="hidden"
     >
       <YStack
         backgroundColor="white"
-        borderRadius={220}
-        minHeight={520}
+        borderTopLeftRadius={280}
+        borderTopRightRadius={280}
+        minHeight={850}
         padding="$6"
-        justifyContent="center"
+        marginTop={150}
         alignItems="center"
-        gap="$4"
+        width="150%"
+        flexShrink={0}
       >
-        <H1 fontSize={26}>プロフィール</H1>
-
-        <Text fontSize={12}>後から変更可能です。</Text>
+        <XStack gap="$2" marginTop="40" marginBottom="50">
+          {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+            <Text key={i} backgroundColor={step === i + 1 ? "#B6B6B6" : "#FFF"} border="1px solid #B6B6B6" borderRadius={100} height={10} width={10} margin={3}>
+            </Text>
+          ))}
+        </XStack>
 
         {step === 1 && (
-          <YStack gap="$3" width="80%" alignItems="center">
+          <YStack width="80%" alignItems="center">
+
+            <Text fontSize={20}>学科を選んでください</Text>
+            <Text marginBottom="40" fontSize={14}>&#8251;後から変更可能です。</Text>
+
             {["1年", "2年", "3年", "4年"].map((item) => (
               <Button
                 key={item}
-                width="70%"
+                width="50%"
+                height="50"
+                border="1px solid #B6B6B6"
                 borderRadius="$10"
-                backgroundColor={grade === item ? "#222" : "white"}
-                color={grade === item ? "white" : "black"}
+                backgroundColor={grade === item ? "#FFDF78" : "white"}
+                color="black"
                 borderWidth={1}
+                marginBottom={30}
                 onPress={() => setGrade(item)}
               >
                 {item}
@@ -253,7 +263,9 @@ export default function ProfileSetup() {
 
         {step === 2 && (
           <YStack gap="$4" alignItems="center">
-            <Text>アイコン</Text>
+            
+            <Text fontSize={20}>アイコンを選択してください</Text>
+            <Text marginBottom="40" fontSize={14}>&#8251;後から変更可能です。</Text>
 
             <Button
               width={120}
@@ -279,38 +291,48 @@ export default function ProfileSetup() {
               )}
             </Button>
 
-            <Text color="#777">画像を選択</Text>
+            <Text color="#777" marginBottom={127}>画像を選択</Text>
           </YStack>
         )}
 
         {step === 3 && (
-          <YStack gap="$4" width="100%">
-            <Text>メールアドレス</Text>
+          <YStack gap="$4">
+            <Text textAlign="center" marginTop={30} fontSize={20}>以下の内容を入力してください</Text>
+            <Text textAlign="center" marginBottom="40" fontSize={14}>&#8251;後から変更可能です。</Text>
 
-            <Input value={auth.currentUser?.email || ""} editable={false} />
+            <Input width={320} value={auth.currentUser?.email || ""} editable={false} />
 
-            <Text>表示名（ニックネーム可）</Text>
+            <Text>表示名　※誰でもわかる名前（本名）にしましょう</Text>
 
             <Input
+              width={320}
               placeholder="表示名を記入してください"
               value={displayName}
               onChangeText={setDisplayName}
+              marginBottom={111}
             />
           </YStack>
         )}
 
         {step === 4 && (
-          <YStack gap="$4" width="100%">
+          <YStack gap="$4" width="60%">
             <Text textAlign="center">
-              自身に当てはまるキーワードを選択してください
+              誰かのために力になれそうな分野、
+              {"\n"}
+              話せる内容を選んでください
             </Text>
+            <Text marginBottom="10" fontSize={14}>&#8251;後から変更可能です。</Text>
+            <Text marginBottom="10">※３つまで選択することができます。</Text>
 
-            <XStack flexWrap="wrap" gap="$2" justifyContent="center">
+            <XStack display="flex" flexWrap="wrap" gap="$2" justifyContent="center" marginBottom="5">
               {TAGS.map((tag) => (
                 <Button
                   key={tag}
-                  size="$2"
-                  borderRadius="$10"
+                  width={80}
+                  height={80}
+                  fontSize={12}
+                  padding={0}
+                  color="#000"
                   backgroundColor={
                     selectedTags.includes(tag) ? "#E8C75A" : "white"
                   }
@@ -325,22 +347,13 @@ export default function ProfileSetup() {
           </YStack>
         )}
 
-        <XStack gap="$2" marginTop="$4">
-          {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-            <Text key={i} color={step === i + 1 ? "#999" : "#DDD"}>
-              ●
-            </Text>
-          ))}
-        </XStack>
-      </YStack>
-
       <Button
-        marginTop="$6"
+        marginTop="100"
         alignSelf="center"
         width="70%"
         height={52}
-        borderRadius="$10"
-        backgroundColor="#FFD966"
+        borderRadius={35}
+        backgroundColor="#FFDF78"
         color="black"
         fontWeight="700"
         onPress={handleNext}
@@ -360,6 +373,8 @@ export default function ProfileSetup() {
           1つ前へ戻る
         </Text>
       )}
+      </YStack>
+
     </YStack>
   );
 }
