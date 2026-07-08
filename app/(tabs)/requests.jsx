@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, ScrollView,Image} from "react-native";
+import { Alert, ScrollView, Image, Pressable } from "react-native";
 import { router } from "expo-router";
 import { YStack, XStack, Text, Button, Card } from "tamagui";
 import {
@@ -19,11 +19,7 @@ const FILTERS = [
   { key: "little", label: "ちょっと" },
 ];
 
-function ResponderAvatar({
-  name,
-  photoURL,
-  size = 80,
-}) {
+function ResponderAvatar({ name, photoURL, size = 80 }) {
   if (photoURL) {
     return (
       <Image
@@ -48,11 +44,7 @@ function ResponderAvatar({
       alignItems="center"
       justifyContent="center"
     >
-      <Text
-        fontWeight="700"
-        color="#111"
-        fontSize={size * 0.4}
-      >
+      <Text fontWeight="700" color="#111" fontSize={size * 0.4}>
         {name?.charAt(0) || "?"}
       </Text>
     </YStack>
@@ -65,7 +57,6 @@ export default function Requests() {
   const [responders, setResponders] = useState([]);
   const [cancelling, setCancelling] = useState(false);
 
-  // 自分の「投稿中」の相談を1件だけ監視（waiting or responded で、まだ matched/cancelled ではないもの）
   useEffect(() => {
     const uid = auth.currentUser?.uid;
     if (!uid) return;
@@ -90,7 +81,6 @@ export default function Requests() {
           active.push({ id: docSnap.id, ...data });
         });
 
-        // 最新の投稿を優先
         active.sort((a, b) => {
           const aTime = a.createdAt?.seconds || 0;
           const bTime = b.createdAt?.seconds || 0;
@@ -162,8 +152,15 @@ export default function Requests() {
   };
 
   const handleOpenResponder = (requestId) => {
+    console.log("opening request detail:", requestId);
+
+    if (!requestId) {
+      Alert.alert("Error", "リクエストIDが見つかりません");
+      return;
+    }
+
     router.push({
-      pathname: "/requestDetail",
+      pathname: "/request-detail",
       params: { id: requestId },
     });
   };
@@ -180,40 +177,21 @@ export default function Requests() {
       >
         <YStack gap="$4">
           {/* フィルター */}
-          {/* タイトル */}
-<YStack
-  alignItems="center"
-  marginBottom="$4"
->
-  <Text
-    fontSize={30}
-    fontWeight="800"
-    color="#222"
-  >
-    リクエスト
-  </Text>
-</YStack>
-
-{/* フィルター */}
-<XStack
-  gap="$2"
-  flexWrap="wrap"
-  justifyContent="center"
->
-  {FILTERS.map((f) => (
-    <Button
-      key={f.key}
-      size="$3"
-      borderRadius="$10"
-      backgroundColor={activeFilter === f.key ? "#333" : "#EDEAE3"}
-      color={activeFilter === f.key ? "white" : "#999"}
-      fontWeight="700"
-      onPress={() => setActiveFilter(f.key)}
-    >
-      {f.label}
-    </Button>
-  ))}
-</XStack>
+          <XStack gap="$2" flexWrap="wrap" justifyContent="center">
+            {FILTERS.map((f) => (
+              <Button
+                key={f.key}
+                size="$3"
+                borderRadius="$10"
+                backgroundColor={activeFilter === f.key ? "#333" : "#EDEAE3"}
+                color={activeFilter === f.key ? "white" : "#999"}
+                fontWeight="700"
+                onPress={() => setActiveFilter(f.key)}
+              >
+                {f.label}
+              </Button>
+            ))}
+          </XStack>
 
           {myActivePost ? (
             <>
@@ -229,7 +207,12 @@ export default function Requests() {
                 gap="$4"
                 alignItems="center"
               >
-                <XStack alignItems="center" gap="$2" flexWrap="wrap" alignSelf="flex-start">
+                <XStack
+                  alignItems="center"
+                  gap="$2"
+                  flexWrap="wrap"
+                  alignSelf="flex-start"
+                >
                   <YStack
                     width={10}
                     height={10}
@@ -275,48 +258,51 @@ export default function Requests() {
 
               {/* 回答者一覧 or 空メッセージ */}
               {filteredResponders.length > 0 ? (
-                <YStack gap="$2">
+                <XStack gap="$3" flexWrap="wrap">
                   {filteredResponders.map((r) => (
-                    <Card
-  key={r.uid}
-  backgroundColor="white"
-  width={170}
-  height={230}
-  borderRadius="$7"
-  alignItems="center"
-  justifyContent="center"
-  pressStyle={{ opacity: 0.8 }}
-  onPress={() => handleOpenResponder(r.requestId)}
->
-  <ResponderAvatar
-    name={r.name}
-    photoURL={r.photoURL}
-    size={100}
-  />
+                    <Pressable
+                      key={r.uid}
+                      onPress={() => handleOpenResponder(r.requestId)}
+                      style={({ pressed }) => ({
+                        width: 170,
+                        height: 230,
+                        borderRadius: 20,
+                        backgroundColor: "white",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        opacity: pressed ? 0.7 : 1,
+                        shadowColor: "#000",
+                        shadowOpacity: 0.05,
+                        shadowRadius: 6,
+                        shadowOffset: { width: 0, height: 2 },
+                        elevation: 2,
+                      })}
+                    >
+                      <ResponderAvatar
+                        name={r.name}
+                        photoURL={r.photoURL}
+                        size={100}
+                      />
 
-  <Text
-    marginTop="$3"
-    fontSize={20}
-    fontWeight="800"
-  >
-    {r.name}
-    {r.grade ? ` (${r.grade})` : ""}
-  </Text>
+                      <Text marginTop="$3" fontSize={20} fontWeight="800">
+                        {r.name}
+                        {r.grade ? ` (${r.grade})` : ""}
+                      </Text>
 
-  <Text
-    marginTop="$2"
-    backgroundColor="#FFE8A3"
-    color="#C58B00"
-    paddingHorizontal="$4"
-    paddingVertical="$2"
-    borderRadius={999}
-    fontWeight="700"
-  >
-    {r.timing}
-  </Text>
-</Card>
+                      <Text
+                        marginTop="$2"
+                        backgroundColor="#FFE8A3"
+                        color="#C58B00"
+                        paddingHorizontal="$4"
+                        paddingVertical="$2"
+                        borderRadius={999}
+                        fontWeight="700"
+                      >
+                        {r.timing}
+                      </Text>
+                    </Pressable>
                   ))}
-                </YStack>
+                </XStack>
               ) : (
                 <YStack alignItems="center" paddingVertical="$6">
                   <Text color="#AAA" fontSize={14}>

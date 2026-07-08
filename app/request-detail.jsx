@@ -5,8 +5,6 @@ import { YStack, XStack, Text, Button, Input, Card } from "tamagui";
 import { doc, updateDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { db, auth } from "../lib/firebase";
 
-const THANKS_MESSAGE = "ありがとうございます！よろしくお願いします。";
-
 const getParam = (value, fallback = "") => {
   if (Array.isArray(value)) return value[0] || fallback;
   return value || fallback;
@@ -167,7 +165,6 @@ export default function RequestDetail() {
 
       await updateDoc(requestRef, {
         thanksSent: true,
-        thanksMessage: THANKS_MESSAGE,
         thanksFromUid: myUid,
         thanksFromName: myName,
         thanksFromGrade: myGrade,
@@ -252,10 +249,11 @@ export default function RequestDetail() {
   return (
     <YStack flex={1} backgroundColor="#F3F3F3">
       <XStack
-        height={90}
+        height={110}
         backgroundColor="white"
         alignItems="center"
         paddingHorizontal="$4"
+        paddingTop={50}
       >
         <Text fontSize={36} color="#BBB" onPress={() => router.back()}>
           ‹
@@ -266,7 +264,12 @@ export default function RequestDetail() {
         </Text>
       </XStack>
 
-      <ScrollView>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: 100,
+        }}
+      >
         <YStack padding="$4" gap="$4">
           <XStack alignItems="center" gap="$3">
             <AvatarCircle
@@ -350,17 +353,6 @@ export default function RequestDetail() {
                 {detail || "詳細はありません。"}
               </Text>
             </YStack>
-          </Card>
-
-          <Card backgroundColor="white" borderRadius="$6" padding="$4" gap="$3">
-            <Text fontWeight="700">送るメッセージ</Text>
-
-            <Input
-              height={48}
-              backgroundColor="white"
-              value={THANKS_MESSAGE}
-              editable={false}
-            />
           </Card>
 
           {isMatched ? (
