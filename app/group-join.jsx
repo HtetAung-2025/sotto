@@ -38,10 +38,7 @@ export default function GroupJoin() {
 
       const inputCode = code.trim().toUpperCase();
 
-      const q = query(
-        collection(db, "groups"),
-        where("code", "==", inputCode)
-      );
+      const q = query(collection(db, "groups"), where("code", "==", inputCode));
 
       const snapshot = await getDocs(q);
 
@@ -70,7 +67,7 @@ export default function GroupJoin() {
 
           updatedAt: serverTimestamp(),
         },
-        { merge: true }
+        { merge: true },
       );
 
       Alert.alert("参加しました", `${groupData.name} に参加しました`, [
@@ -87,73 +84,67 @@ export default function GroupJoin() {
   };
 
   return (
-    <YStack flex={1} backgroundColor="#F3F3F3">
-      <XStack
-        height={86}
-        backgroundColor="white"
-        alignItems="center"
-        justifyContent="center"
-        borderBottomWidth={1}
-        borderBottomColor="#EEE"
-      >
-        <Text
-          position="absolute"
-          left="$4"
-          fontSize={34}
-          color="#BBB"
-          onPress={() => router.back()}
-        >
-          ‹
-        </Text>
-
-        <XStack alignItems="center" gap="$2">
-          <UserPlus color="#FFD966" size={28} />
-          <Text fontSize={24} fontWeight="700">
-            グループ参加
-          </Text>
-        </XStack>
-      </XStack>
-
+    <YStack flex={1} backgroundColor="#FFF">
       <YStack flex={1} justifyContent="center" padding="$5">
         <YStack gap="$5" alignItems="center">
-          <Text fontSize={22} fontWeight="700">
-            参加コードを入力
+          <Text fontSize={20} fontWeight="700" color="#000" marginBottom={35}>
+            グループ参加
           </Text>
 
-          <Text width="82%" fontSize={14} color="#666" lineHeight={22}>
-            グループ作成者から受け取ったコードを入力してください。
+          <Text fontSize={20} fontWeight="700" color="#000">
+            グループコードを入力してください
+          </Text>
+
+          <Text
+            width="90%"
+            fontSize={14}
+            color="#000"
+            lineHeight={22}
+            textAlign="center"
+            marginBottom={20}
+          >
+            グループコードを持っていない方は
+            {"\n"}
+            グループ作成し、コードを作成してください。
           </Text>
 
           <Input
             width="100%"
             height={54}
-            backgroundColor="white"
-            placeholder="例：ABC123"
+            placeholder="グループコードを入力してください"
             value={code}
             onChangeText={setCode}
             autoCapitalize="characters"
+            backgroundColor="#F2F2F2"
+            border="#B6B6B6"
+            placeholderTextColor="#B6B6B6"
           />
 
           <Button
-            marginTop="$10"
-            width="70%"
-            height={58}
+            marginTop={30}
+            width="100%"
+            height={45}
             borderRadius="$10"
             backgroundColor="#FFD966"
             color="black"
-            fontSize={22}
+            fontSize={20}
             fontWeight="700"
             onPress={joinGroup}
             disabled={joining}
             opacity={joining ? 0.6 : 1}
           >
-            {joining ? "参加中..." : "参加する"}
+            次へ
+            {/* {joining ? "参加中..." : "次へ"} */}
           </Button>
 
-          <XStack gap="$3" marginTop="$4">
+          <Text color="#B6B6B6" onPress={() => router.back()}>
+            １つ前に戻る
+          </Text>
+
+          {/* <XStack gap="$3" marginTop="$4">
             <Text color="#999">●</Text>
             <Text color="#DDD">○</Text>
-          </XStack>
+          </XStack> */}
         </YStack>
       </YStack>
     </YStack>
