@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { Alert, ScrollView, Image } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { YStack, XStack, Text, Button, Input, Card } from "tamagui";
-import { doc, updateDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import { doc, updateDoc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { db, auth } from "../lib/firebase";
+
+const THANKS_MESSAGE = "ありがとうございます！よろしくお願いします。";
 
 const getParam = (value, fallback = "") => {
   if (Array.isArray(value)) return value[0] || fallback;
@@ -71,13 +73,16 @@ export default function RequestDetail() {
   const params = useLocalSearchParams();
 
   const requestId = getParam(params.id);
+  const responderUidParam = getParam(params.responderUid);
+
   const [requestData, setRequestData] = useState(null);
-  const [responderData, setResponderData] = useState(null);
+  const [responseData, setResponseData] = useState(null); // 複数人対応：この回答者個別のデータ
+  const [responderProfile, setResponderProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadRequest();
-  }, [requestId]);
+  }, [requestId, responderUidParam]);
 
   const loadRequest = async () => {
     try {
@@ -102,11 +107,25 @@ export default function RequestDetail() {
 
       setRequestData(request);
 
-      if (request.respondedBy) {
-        const responderSnap = await getDoc(doc(db, "users", request.respondedBy));
+      const isGroup = request.type === "group";
+      const targetResponderUid = responderUidParam || request.respondedBy;
+
+      if (isGroup && targetResponderUid) {
+        // 複数人対応：responses サブコレクションからこの回答者のデータを取得
+        const responseSnap = await getDoc(
+          doc(db, "requests", requestId, "responses", targetResponderUid)
+        );
+
+        if (responseSnap.exists()) {
+          setResponseData({ uid: targetResponderUid, ...responseSnap.data() });
+        }
+      }
+
+      if (targetResponderUid) {
+        const responderSnap = await getDoc(doc(db, "users", targetResponderUid));
 
         if (responderSnap.exists()) {
-          setResponderData(responderSnap.data());
+          setResponderProfile(responderSnap.data());
         }
       }
     } catch (error) {
@@ -140,18 +159,15 @@ export default function RequestDetail() {
 
       const request = requestSnap.data();
 
-      if (request.status === "matched" || request.thanksSent) {
-        Alert.alert("送信済み", "すでにありがとうを送りました");
-        router.replace("/(tabs)/notifications");
-        return;
-      }
-
       if (request.fromUid !== myUid) {
         Alert.alert("Error", "この相談を投稿した人だけがありがとうを送れます");
         return;
       }
 
-      if (!request.respondedBy) {
+      const isGroup = request.type === "group";
+      const targetResponderUid = responderUidParam || request.respondedBy;
+
+      if (!targetResponderUid) {
         Alert.alert("Error", "返事した人が見つかりません");
         return;
       }
@@ -163,22 +179,55 @@ export default function RequestDetail() {
       const myGrade = myData.grade || "";
       const myImage = getProfileImage(myData);
 
-      await updateDoc(requestRef, {
-        thanksSent: true,
-        thanksFromUid: myUid,
-        thanksFromName: myName,
-        thanksFromGrade: myGrade,
-        thanksFromPhotoURL: myImage,
+      if (isGroup) {
+        // 複数人対応：この回答者のresponsesドキュメントだけを更新
+        const responseRef = doc(
+          db,
+          "requests",
+          requestId,
+          "responses",
+          targetResponderUid
+        );
 
-        // ここが重要
-        // 回答者がまだ「ありがとう」を見ていない状態にする
-        thanksSeenByResponder: false,
+        const responseSnap = await getDoc(responseRef);
 
-        thanksAt: serverTimestamp(),
-        status: "matched",
-      });
+        if (responseSnap.exists() && responseSnap.data().thanksSent) {
+          Alert.alert("送信済み", "すでにこの人にありがとうを送りました");
+          return;
+        }
 
-      const responderSnap = await getDoc(doc(db, "users", request.respondedBy));
+        await updateDoc(responseRef, {
+          thanksSent: true,
+          thanksMessage: THANKS_MESSAGE,
+          thanksFromUid: myUid,
+          thanksFromName: myName,
+          thanksFromGrade: myGrade,
+          thanksFromPhotoURL: myImage,
+          thanksSeenByResponder: false,
+          thanksAt: serverTimestamp(),
+        });
+      } else {
+        // 個人宛て(direct)は今まで通り
+        if (request.status === "matched" || request.thanksSent) {
+          Alert.alert("送信済み", "すでにありがとうを送りました");
+          router.replace("/(tabs)/requests");
+          return;
+        }
+
+        await updateDoc(requestRef, {
+          thanksSent: true,
+          thanksMessage: THANKS_MESSAGE,
+          thanksFromUid: myUid,
+          thanksFromName: myName,
+          thanksFromGrade: myGrade,
+          thanksFromPhotoURL: myImage,
+          thanksSeenByResponder: false,
+          thanksAt: serverTimestamp(),
+          status: "matched",
+        });
+      }
+
+      const responderSnap = await getDoc(doc(db, "users", targetResponderUid));
       const responderToken = responderSnap.data()?.expoPushToken;
 
       if (responderToken) {
@@ -199,7 +248,7 @@ export default function RequestDetail() {
       Alert.alert("送信しました", "相手にありがとうを送りました", [
         {
           text: "OK",
-          onPress: () => router.replace("/(tabs)/notifications"),
+          onPress: () => router.replace("/(tabs)/requests"),
         },
       ]);
     } catch (error) {
@@ -220,17 +269,26 @@ export default function RequestDetail() {
     );
   }
 
-  const responderName =
-    requestData?.respondedByName || getParam(params.name, "名前なし");
+  const isGroup = requestData?.type === "group";
 
-  const responderGrade = requestData?.respondedByGrade || "";
+  const responderName =
+    (isGroup ? responseData?.name : requestData?.respondedByName) ||
+    responderProfile?.name ||
+    getParam(params.name, "名前なし");
+
+  const responderGrade =
+    (isGroup ? responseData?.grade : requestData?.respondedByGrade) ||
+    responderProfile?.grade ||
+    "";
 
   const responderImage =
-    getProfileImage(responderData) ||
-    requestData?.respondedByPhotoURL ||
+    (isGroup ? responseData?.photoURL : requestData?.respondedByPhotoURL) ||
+    getProfileImage(responderProfile) ||
     getParam(params.imageUrl, "");
 
-  const timing = requestData?.timing || getParam(params.timing, "");
+  const timing =
+    (isGroup ? responseData?.timingLabel || responseData?.timing : requestData?.timing) ||
+    getParam(params.timing, "");
 
   const talkTags = Array.isArray(requestData?.talkTags)
     ? requestData.talkTags
@@ -238,13 +296,13 @@ export default function RequestDetail() {
         .split(",")
         .filter((tag) => tag);
 
-  const feelTag = requestData?.feelTag || getParam(params.feelTag, "");
-
   const detail = requestData?.detail || getParam(params.detail, "");
 
   const requestType = requestData?.type === "direct" ? "出会う" : "見つける";
 
-  const isMatched = requestData?.status === "matched" || requestData?.thanksSent;
+  const isMatched = isGroup
+    ? !!responseData?.thanksSent
+    : requestData?.status === "matched" || requestData?.thanksSent;
 
   return (
     <YStack flex={1} backgroundColor="#F3F3F3">
@@ -255,7 +313,11 @@ export default function RequestDetail() {
         paddingHorizontal="$4"
         paddingTop={50}
       >
-        <Text fontSize={36} color="#BBB" onPress={() => router.back()}>
+        <Text
+          fontSize={36}
+          color="#BBB"
+          onPress={() => router.replace("/(tabs)/requests")}
+        >
           ‹
         </Text>
 
@@ -353,6 +415,17 @@ export default function RequestDetail() {
                 {detail || "詳細はありません。"}
               </Text>
             </YStack>
+          </Card>
+
+          <Card backgroundColor="white" borderRadius="$6" padding="$4" gap="$3">
+            <Text fontWeight="700">送るメッセージ</Text>
+
+            <Input
+              height={48}
+              backgroundColor="white"
+              value={THANKS_MESSAGE}
+              editable={false}
+            />
           </Card>
 
           {isMatched ? (
