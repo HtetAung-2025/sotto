@@ -1,11 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Alert, Animated, Easing } from "react-native";
 import { router } from "expo-router";
-import { YStack, H1, Input, Button } from "tamagui";
-import {
-  signInWithEmailAndPassword,
-  onAuthStateChanged,
-} from "firebase/auth";
+import { Image } from "expo-image";
+import { YStack, H1, Input, Button, Text, XStack, Circle } from "tamagui";
+import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 
@@ -40,7 +38,6 @@ export default function LoginScreen() {
 
       // テスト用：常に通知画面へ
       router.replace("/allow-notifications");
-
     } catch (error: any) {
       Alert.alert("Role Check Failed", error.message);
     }
@@ -59,7 +56,7 @@ export default function LoginScreen() {
     const fadeSlide = (
       opacity: Animated.Value,
       translateY: Animated.Value,
-      delay: number
+      delay: number,
     ) =>
       Animated.sequence([
         Animated.delay(delay),
@@ -93,7 +90,7 @@ export default function LoginScreen() {
       const userCredential = await signInWithEmailAndPassword(
         auth,
         email,
-        password
+        password,
       );
       await redirectByRole(userCredential.user.uid);
     } catch (error: any) {
@@ -102,14 +99,36 @@ export default function LoginScreen() {
   };
 
   return (
-    <YStack flex={1} justifyContent="center" padding="$4" gap="$4">
+    <YStack
+      flex={1}
+      justifyContent="center"
+      padding="$4"
+      gap="$4"
+      backgroundColor="#FFF"
+    >
       <Animated.View
         style={{
           opacity: titleOpacity,
           transform: [{ translateY: titleTranslateY }],
         }}
       >
-        <H1>Login</H1>
+        <Image
+          source={require("../assets/images/logo.svg")}
+          style={{
+            width: 70,
+            height: 60,
+            alignSelf: "center",
+            paddingBlock: 80,
+            marginBottom: 70,
+          }}
+        />
+
+        <XStack alignItems="center" gap="$1" marginLeft={5}>
+          <Circle size={35} backgroundColor="#FFD966" />
+          <H1 color="#000" fontSize={32}>
+            ログイン
+          </H1>
+        </XStack>
       </Animated.View>
 
       <Animated.View
@@ -118,12 +137,20 @@ export default function LoginScreen() {
           transform: [{ translateY: emailTranslateY }],
         }}
       >
+        <Text color="#000" marginLeft={15}>
+          メールアドレス
+        </Text>
         <Input
-          placeholder="School Email"
+          placeholder="メールアドレス"
+          fontSize={14}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
+          backgroundColor="#F2F2F2"
+          border="#B6B6B6"
+          color="#000"
+          marginBottom={20}
         />
       </Animated.View>
 
@@ -133,11 +160,19 @@ export default function LoginScreen() {
           transform: [{ translateY: passwordTranslateY }],
         }}
       >
+        <Text color="#000" marginLeft={15}>
+          パスワード
+        </Text>
         <Input
-          placeholder="Password"
+          placeholder="パスワード"
+          fontSize={14}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          backgroundColor="#F2F2F2"
+          border="#B6B6B6"
+          color="#000"
+          marginBottom={40}
         />
       </Animated.View>
 
@@ -147,7 +182,17 @@ export default function LoginScreen() {
           transform: [{ translateY: loginButtonTranslateY }],
         }}
       >
-        <Button onPress={handleLogin}>Login</Button>
+        <Button
+          onPress={handleLogin}
+          height={60}
+          borderRadius={30}
+          backgroundColor="#FFF"
+          border="1px solid #000"
+          color="#000"
+          fontSize={20}
+        >
+          ログイン
+        </Button>
       </Animated.View>
 
       <Animated.View
@@ -156,8 +201,15 @@ export default function LoginScreen() {
           transform: [{ translateY: createButtonTranslateY }],
         }}
       >
-        <Button onPress={() => router.push("/register")}>
-          Create Account
+        <Button
+          onPress={() => router.push("/register")}
+          height={60}
+          borderRadius={30}
+          backgroundColor="#FFD966"
+          color="#000"
+          fontSize={20}
+        >
+          初めての方はこちら
         </Button>
       </Animated.View>
     </YStack>

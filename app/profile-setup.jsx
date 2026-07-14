@@ -85,7 +85,8 @@ export default function ProfileSetup() {
 
   const pickImage = async () => {
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (!permission.granted) {
         Alert.alert("写真へのアクセスを許可してください");
@@ -117,7 +118,7 @@ export default function ProfileSetup() {
             compress: 0.35,
             format: ImageManipulator.SaveFormat.JPEG,
             base64: true,
-          }
+          },
         );
 
         setImageUri(resizedImage.uri);
@@ -184,7 +185,7 @@ export default function ProfileSetup() {
 
           updatedAt: serverTimestamp(),
         },
-        { merge: true }
+        { merge: true },
       );
 
       Alert.alert("保存しました", "プロフィールを更新しました", [
@@ -231,16 +232,24 @@ export default function ProfileSetup() {
       >
         <XStack gap="$2" marginTop="40" marginBottom="50">
           {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-            <Text key={i} backgroundColor={step === i + 1 ? "#B6B6B6" : "#FFF"} border="1px solid #B6B6B6" borderRadius={100} height={10} width={10} margin={3}>
-            </Text>
+            <Text
+              key={i}
+              backgroundColor={step === i + 1 ? "#B6B6B6" : "#FFF"}
+              border="1px solid #B6B6B6"
+              borderRadius={100}
+              height={10}
+              width={10}
+              margin={3}
+            ></Text>
           ))}
         </XStack>
 
         {step === 1 && (
           <YStack width="80%" alignItems="center">
-
             <Text fontSize={20}>学科を選んでください</Text>
-            <Text marginBottom="40" fontSize={14}>&#8251;後から変更可能です。</Text>
+            <Text marginBottom="40" fontSize={14}>
+              &#8251;後から変更可能です。
+            </Text>
 
             {["1年", "2年", "3年", "4年"].map((item) => (
               <Button
@@ -263,9 +272,10 @@ export default function ProfileSetup() {
 
         {step === 2 && (
           <YStack gap="$4" alignItems="center">
-            
             <Text fontSize={20}>アイコンを選択してください</Text>
-            <Text marginBottom="40" fontSize={14}>&#8251;後から変更可能です。</Text>
+            <Text marginBottom="40" fontSize={14}>
+              &#8251;後から変更可能です。
+            </Text>
 
             <Button
               width={120}
@@ -291,16 +301,29 @@ export default function ProfileSetup() {
               )}
             </Button>
 
-            <Text color="#777" marginBottom={127}>画像を選択</Text>
+            <Text color="#777" marginBottom={127}>
+              画像を選択
+            </Text>
           </YStack>
         )}
 
         {step === 3 && (
           <YStack gap="$4">
-            <Text textAlign="center" marginTop={30} fontSize={20}>以下の内容を入力してください</Text>
-            <Text textAlign="center" marginBottom="40" fontSize={14}>&#8251;後から変更可能です。</Text>
+            <Text textAlign="center" marginTop={30} fontSize={20}>
+              以下の内容を入力してください
+            </Text>
+            <Text textAlign="center" marginBottom="40" fontSize={14}>
+              &#8251;後から変更可能です。
+            </Text>
 
-            <Input width={320} value={auth.currentUser?.email || ""} editable={false} />
+            <Input
+              width={320}
+              value={auth.currentUser?.email || ""}
+              editable={false}
+              backgroundColor="#F2F2F2"
+              border="#B6B6B6"
+              color="#000"
+            />
 
             <Text>表示名　※誰でもわかる名前（本名）にしましょう</Text>
 
@@ -310,6 +333,9 @@ export default function ProfileSetup() {
               value={displayName}
               onChangeText={setDisplayName}
               marginBottom={111}
+              backgroundColor="#F2F2F2"
+              border="#B6B6B6"
+              color="#000"
             />
           </YStack>
         )}
@@ -321,10 +347,20 @@ export default function ProfileSetup() {
               {"\n"}
               話せる内容を選んでください
             </Text>
-            <Text marginBottom="10" fontSize={14}>&#8251;後から変更可能です。</Text>
-            <Text marginBottom="10">※３つまで選択することができます。</Text>
+            <Text textAlign="center" marginBottom="10" fontSize={14}>
+              &#8251;後から変更可能です。
+            </Text>
+            <Text textAlign="center" marginBottom="10">
+              ※３つまで選択することができます。
+            </Text>
 
-            <XStack display="flex" flexWrap="wrap" gap="$2" justifyContent="center" marginBottom="5">
+            <XStack
+              display="flex"
+              flexWrap="wrap"
+              gap="$2"
+              justifyContent="center"
+              marginBottom="5"
+            >
               {TAGS.map((tag) => (
                 <Button
                   key={tag}
@@ -347,34 +383,33 @@ export default function ProfileSetup() {
           </YStack>
         )}
 
-      <Button
-        marginTop="100"
-        alignSelf="center"
-        width="70%"
-        height={52}
-        borderRadius={35}
-        backgroundColor="#FFDF78"
-        color="black"
-        fontWeight="700"
-        onPress={handleNext}
-        disabled={saving}
-        opacity={saving ? 0.6 : 1}
-      >
-        {saving ? "保存中..." : step === TOTAL_STEPS ? "確定" : "次へ"}
-      </Button>
-
-      {step > 1 && (
-        <Text
-          marginTop="$3"
-          textAlign="center"
-          color="#999"
-          onPress={() => setStep(step - 1)}
+        <Button
+          marginTop="100"
+          alignSelf="center"
+          width="70%"
+          height={52}
+          borderRadius={35}
+          backgroundColor="#FFDF78"
+          color="black"
+          fontWeight="700"
+          onPress={handleNext}
+          disabled={saving}
+          opacity={saving ? 0.6 : 1}
         >
-          1つ前へ戻る
-        </Text>
-      )}
-      </YStack>
+          {saving ? "保存中..." : step === TOTAL_STEPS ? "確定" : "次へ"}
+        </Button>
 
+        {step > 1 && (
+          <Text
+            marginTop="$3"
+            textAlign="center"
+            color="#999"
+            onPress={() => setStep(step - 1)}
+          >
+            1つ前へ戻る
+          </Text>
+        )}
+      </YStack>
     </YStack>
   );
 }

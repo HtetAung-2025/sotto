@@ -1,6 +1,6 @@
 import { Alert } from "react-native";
 import { router } from "expo-router";
-import { YStack, Text, Button } from "tamagui";
+import { YStack, Text, Button, Image } from "tamagui";
 import { registerForPushNotificationsAsync } from "../lib/notifications";
 
 export default function AllowNotifications() {
@@ -26,17 +26,28 @@ export default function AllowNotifications() {
       padding="$5"
       gap="$5"
     >
-      <Text fontSize={28} fontWeight="700">
-        通知を許可しますか？
+      <Text fontSize={20} fontWeight="700" color="#000">
+        たくさんの人と出会うコツ！
       </Text>
 
-      <Text fontSize={15} color="#777" textAlign="center" lineHeight={22}>
-        相談が届いた時や、返事・ありがとうが届いた時に通知を受け取れます。
+      <Text fontSize={14} color="#777" textAlign="center" lineHeight={22}>
+        相談リクエストや相手からの返信を
+        {"\n"}
+        リアルタイムでお知らせします。
       </Text>
+
+      <Image
+        src={require("../assets/images/alarm_img.png")}
+        width={250}
+        height={250}
+        objectFit="contain"
+        marginTop={40}
+        marginBottom={100}
+      />
 
       <Button
         width="80%"
-        height={56}
+        height={50}
         borderRadius="$10"
         backgroundColor="#FFD966"
         color="black"
@@ -47,17 +58,9 @@ export default function AllowNotifications() {
         通知を許可する
       </Button>
 
-      <Button
-        width="80%"
-        height={52}
-        borderRadius="$10"
-        backgroundColor="white"
-        color="#777"
-        fontWeight="700"
-        onPress={handleSkip}
-      >
-        今はしない
-      </Button>
+      <Text fontSize={16} color="#777" fontWeight="700" onPress={handleSkip}>
+        後で設定する
+      </Text>
     </YStack>
   );
 }
