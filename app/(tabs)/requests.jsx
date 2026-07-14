@@ -57,6 +57,9 @@ export default function Requests() {
   const [responders, setResponders] = useState([]);
   const [cancelling, setCancelling] = useState(false);
 
+  // 自分の「投稿中」の相談を1件だけ監視
+  // ※ matched でも除外しない：複数人回答対応のため、1人にありがとうを送っても
+  //    投稿自体はキャンセルするまで表示され続ける
   useEffect(() => {
     const uid = auth.currentUser?.uid;
     if (!uid) return;
@@ -76,7 +79,6 @@ export default function Requests() {
           const data = docSnap.data();
 
           if (data.status === "cancelled") return;
-          if (data.status === "matched" || data.thanksSent) return;
 
           active.push({ id: docSnap.id, ...data });
         });
@@ -89,21 +91,6 @@ export default function Requests() {
 
         const latest = active[0] || null;
         setMyActivePost(latest);
-
-        if (latest?.respondedBy) {
-          setResponders([
-            {
-              uid: latest.respondedBy,
-              name: latest.respondedByName,
-              grade: latest.respondedByGrade,
-              photoURL: latest.respondedByPhotoURL,
-              timing: latest.timingLabel || latest.timing,
-              requestId: latest.id,
-            },
-          ]);
-        } else {
-          setResponders([]);
-        }
       },
       (error) => {
         console.log("myActivePost onSnapshot error:", error.message);
@@ -112,6 +99,55 @@ export default function Requests() {
 
     return () => unsubscribe();
   }, []);
+
+  // 選ばれた投稿の responses サブコレクションを監視（複数人対応）
+  useEffect(() => {
+    if (!myActivePost?.id) {
+      setResponders([]);
+      return;
+    }
+
+    const responsesRef = collection(
+      db,
+      "requests",
+      myActivePost.id,
+      "responses"
+    );
+
+    const unsubscribe = onSnapshot(
+      responsesRef,
+      (snapshot) => {
+        const list = [];
+
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+
+          list.push({
+            uid: docSnap.id,
+            name: data.name,
+            grade: data.grade,
+            photoURL: data.photoURL,
+            timing: data.timingLabel || data.timing,
+            thanksSent: data.thanksSent,
+            requestId: myActivePost.id,
+          });
+        });
+
+        list.sort((a, b) => {
+          const aTime = a.respondedAt?.seconds || 0;
+          const bTime = b.respondedAt?.seconds || 0;
+          return bTime - aTime;
+        });
+
+        setResponders(list);
+      },
+      (error) => {
+        console.log("responses onSnapshot error:", error.message);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [myActivePost?.id]);
 
   const filteredResponders =
     activeFilter === "all"
@@ -151,17 +187,15 @@ export default function Requests() {
     ]);
   };
 
-  const handleOpenResponder = (requestId) => {
-    console.log("opening request detail:", requestId);
-
-    if (!requestId) {
+  const handleOpenResponder = (requestId, responderUid) => {
+    if (!requestId || !responderUid) {
       Alert.alert("Error", "リクエストIDが見つかりません");
       return;
     }
 
     router.push({
       pathname: "/request-detail",
-      params: { id: requestId },
+      params: { id: requestId, responderUid },
     });
   };
 
@@ -262,7 +296,9 @@ export default function Requests() {
                   {filteredResponders.map((r) => (
                     <Pressable
                       key={r.uid}
-                      onPress={() => handleOpenResponder(r.requestId)}
+                      onPress={() =>
+                        handleOpenResponder(r.requestId, r.uid)
+                      }
                       style={({ pressed }) => ({
                         width: 170,
                         height: 230,
@@ -291,14 +327,14 @@ export default function Requests() {
 
                       <Text
                         marginTop="$2"
-                        backgroundColor="#FFE8A3"
-                        color="#C58B00"
+                        backgroundColor={r.thanksSent ? "#E6FBF5" : "#FFE8A3"}
+                        color={r.thanksSent ? "#2AA985" : "#C58B00"}
                         paddingHorizontal="$4"
                         paddingVertical="$2"
                         borderRadius={999}
                         fontWeight="700"
                       >
-                        {r.timing}
+                        {r.thanksSent ? "ありがとう送信済み" : r.timing}
                       </Text>
                     </Pressable>
                   ))}

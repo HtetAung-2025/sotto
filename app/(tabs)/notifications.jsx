@@ -4,9 +4,11 @@ import { router, useFocusEffect } from "expo-router";
 import { YStack, XStack, Text, Button, Card } from "tamagui";
 import {
   collection,
+  collectionGroup,
   onSnapshot,
   doc,
   updateDoc,
+  setDoc,
   serverTimestamp,
   getDoc,
 } from "firebase/firestore";
@@ -123,6 +125,15 @@ export default function NotificationsScreen() {
   const [otherRequests, setOtherRequests] = useState([]);
   const [userProfiles, setUserProfiles] = useState({});
 
+  // requestId -> true があれば「自分はこの投稿にすでに回答済み」
+  const [myRespondedRequestIds, setMyRespondedRequestIds] = useState({});
+
+  // 複数人対応：自分の投稿に来た「個別の回答」一覧（responses サブコレクション横断）
+  const [myPostResponses, setMyPostResponses] = useState([]);
+
+  // 複数人対応：自分が回答した「個別の回答」一覧（ありがとうが来たかどうか含む）
+  const [myOwnResponses, setMyOwnResponses] = useState([]);
+
   const currentUid = auth.currentUser?.uid;
 
   useEffect(() => {
@@ -180,19 +191,15 @@ export default function NotificationsScreen() {
 
           all.push(data);
 
-          // 自分が投稿した相談
           if (data.fromUid === currentUid) {
             mine.push(data);
           }
 
-          // 個人的に自分へ届いた相談
           const isDirectForMe =
             data.type === "direct" &&
             data.fromUid !== currentUid &&
             data.toUid === currentUid;
 
-          // 投稿タブから全体に投稿された相談
-          // groupId では絞らない
           const isGroupForMe =
             data.type === "group" &&
             data.fromUid !== currentUid;
@@ -224,6 +231,64 @@ export default function NotificationsScreen() {
     };
   }, [currentUid]);
 
+  // 複数人対応：全投稿をまたいで responses を横断監視
+  // - myPostResponses: 自分の投稿に来た回答（複数人ぶん、それぞれ個別カード表示用）
+  // - myOwnResponses: 自分が回答した先（複数投稿ぶん、ありがとうが来たか確認用）
+  // - myRespondedRequestIds: 自分がまだ回答していない投稿を判定するための存在チェック用
+  useEffect(() => {
+    if (!currentUid) return;
+
+    const responsesGroupRef = collectionGroup(db, "responses");
+
+    const unsubscribe = onSnapshot(
+      responsesGroupRef,
+      (snapshot) => {
+        const toMe = [];
+        const byMe = [];
+        const respondedMap = {};
+
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          const requestId = docSnap.ref.parent.parent?.id;
+
+          if (!requestId) return;
+
+          const entry = {
+            requestId,
+            responderUid: docSnap.id,
+            ...data,
+          };
+
+          if (data.requestFromUid === currentUid) {
+            toMe.push(entry);
+          }
+
+          if (docSnap.id === currentUid) {
+            byMe.push(entry);
+            respondedMap[requestId] = true;
+          }
+        });
+
+        toMe.sort(
+          (a, b) => (b.respondedAt?.seconds || 0) - (a.respondedAt?.seconds || 0)
+        );
+
+        byMe.sort(
+          (a, b) => (b.respondedAt?.seconds || 0) - (a.respondedAt?.seconds || 0)
+        );
+
+        setMyPostResponses(toMe);
+        setMyOwnResponses(byMe);
+        setMyRespondedRequestIds(respondedMap);
+      },
+      (error) => {
+        console.log("responses collectionGroup onSnapshot error:", error.message);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [currentUid]);
+
   const handleRespond = async (request, timing) => {
     try {
       if (!currentUid) return;
@@ -243,9 +308,28 @@ export default function NotificationsScreen() {
         return;
       }
 
-      if (latest.status !== "waiting") {
-        Alert.alert("すでに返信済みです");
-        return;
+      const isGroup = latest.type === "group";
+
+      const myResponseRef = doc(
+        db,
+        "requests",
+        request.id,
+        "responses",
+        currentUid
+      );
+
+      if (isGroup) {
+        const myResponseSnap = await getDoc(myResponseRef);
+
+        if (myResponseSnap.exists()) {
+          Alert.alert("すでに返信済みです");
+          return;
+        }
+      } else {
+        if (latest.status !== "waiting") {
+          Alert.alert("すでに返信済みです");
+          return;
+        }
       }
 
       const mySnap = await getDoc(doc(db, "users", currentUid));
@@ -253,16 +337,48 @@ export default function NotificationsScreen() {
       const myName = myData.name || "名前なし";
       const myImage = getProfileImage(myData);
 
-      await updateDoc(requestRef, {
-        respondedBy: currentUid,
-        respondedByName: myName,
-        respondedByGrade: myData.grade || "",
-        respondedByPhotoURL: myImage,
-        timing,
-        timingLabel: timing,
-        status: "responded",
-        respondedAt: serverTimestamp(),
-      });
+      if (isGroup) {
+        // 複数人対応：responsesサブコレクションに自分の回答を追加
+        // requestFromUid を持たせることで、投稿者側は collectionGroup で
+        // 「自分宛ての全回答」を横断検索できる
+        // posterSeen: 投稿者がこの回答をまだ通知タブで見ていないかどうか
+        await setDoc(myResponseRef, {
+          uid: currentUid,
+          requestFromUid: latest.fromUid,
+          name: myName,
+          grade: myData.grade || "",
+          photoURL: myImage,
+          timing,
+          timingLabel: timing,
+          respondedAt: serverTimestamp(),
+          thanksSent: false,
+          thanksSeenByResponder: false,
+          posterSeen: false,
+        });
+
+        await updateDoc(requestRef, {
+          status: "responded",
+          respondedBy: currentUid,
+          respondedByName: myName,
+          respondedByGrade: myData.grade || "",
+          respondedByPhotoURL: myImage,
+          timing,
+          timingLabel: timing,
+          respondedAt: serverTimestamp(),
+        });
+      } else {
+        await updateDoc(requestRef, {
+          respondedBy: currentUid,
+          respondedByName: myName,
+          respondedByGrade: myData.grade || "",
+          respondedByPhotoURL: myImage,
+          timing,
+          timingLabel: timing,
+          status: "responded",
+          respondedAt: serverTimestamp(),
+          posterSeen: false,
+        });
+      }
 
       const fromSnap = await getDoc(doc(db, "users", request.fromUid));
       const fromToken = fromSnap.data()?.expoPushToken;
@@ -290,7 +406,22 @@ export default function NotificationsScreen() {
     }
   };
 
-  const openRequestDetail = (req) => {
+  const openMyPostResponse = (entry) => {
+    if (entry.thanksSent) {
+      Alert.alert("送信済み", "この人にはすでにありがとうを送信しました");
+      return;
+    }
+
+    router.push({
+      pathname: "/request-detail",
+      params: {
+        id: entry.requestId,
+        responderUid: entry.responderUid,
+      },
+    });
+  };
+
+  const openDirectRequestDetail = (req) => {
     if (req.status === "matched") {
       Alert.alert("送信済み", "この相談はすでにありがとうを送信しました");
       return;
@@ -326,22 +457,39 @@ export default function NotificationsScreen() {
     return "全体投稿";
   };
 
-  // 自分の投稿に返事が来たもの
-  const respondedRequests = myRequests.filter(
-    (r) => r.status === "responded" || r.status === "matched"
+  // 自分の投稿に返事が来たもの（direct のみ、旧来通り）
+  const directRespondedRequests = myRequests.filter(
+    (r) => r.type === "direct" && (r.status === "responded" || r.status === "matched")
   );
 
-  // 自分が返信したもの
-  const myRespondedOthers = otherRequests.filter(
-    (r) =>
-      r.respondedBy === currentUid &&
-      (r.status === "responded" || r.status === "matched")
-  );
+  // 自分が返信したもの（direct分は respondedBy で判定、group分は myRespondedRequestIds で判定）
+  const myRespondedOthers = otherRequests.filter((r) => {
+    if (r.type === "direct") {
+      return (
+        r.respondedBy === currentUid &&
+        (r.status === "responded" || r.status === "matched")
+      );
+    }
+
+    if (r.type === "group") {
+      return !!myRespondedRequestIds[r.id];
+    }
+
+    return false;
+  });
 
   // 自分がまだ返信していない相談
-  const waitingRequests = otherRequests.filter(
-    (r) => r.status === "waiting" && !r.respondedBy
-  );
+  const waitingRequests = otherRequests.filter((r) => {
+    if (r.type === "direct") {
+      return r.status === "waiting" && !r.respondedBy;
+    }
+
+    if (r.type === "group") {
+      return !myRespondedRequestIds[r.id];
+    }
+
+    return false;
+  });
 
   const myRespondedOthersKey = myRespondedOthers
     .map(
@@ -350,14 +498,54 @@ export default function NotificationsScreen() {
     )
     .join("|");
 
+  const myOwnResponsesKey = myOwnResponses
+    .map(
+      (r) => `${r.requestId}:${r.thanksSent}:${r.thanksSeenByResponder}`
+    )
+    .join("|");
+
+  // 通知バッジの既読化用キー（自分の投稿に来た回答の未読状態が変わったら再実行）
+  const directRespondedRequestsKey = directRespondedRequests
+    .map((req) => `${req.id}:${req.posterSeen}`)
+    .join("|");
+
+  const myPostResponsesKey = myPostResponses
+    .map((entry) => `${entry.requestId}-${entry.responderUid}:${entry.posterSeen}`)
+    .join("|");
+
   useFocusEffect(
     useCallback(() => {
       const markThanksAsSeen = async () => {
         try {
           if (!currentUid) return;
 
+          // 自分の投稿への回答（direct）を既読にする → バッジのカウントから外れる
+          const unseenDirectReplies = directRespondedRequests.filter(
+            (req) => req.posterSeen !== true
+          );
+
+          for (const req of unseenDirectReplies) {
+            await updateDoc(doc(db, "requests", req.id), {
+              posterSeen: true,
+            });
+          }
+
+          // 自分の投稿への回答（group、複数人ぶん）を既読にする
+          const unseenGroupReplies = myPostResponses.filter(
+            (entry) => entry.posterSeen !== true
+          );
+
+          for (const entry of unseenGroupReplies) {
+            await updateDoc(
+              doc(db, "requests", entry.requestId, "responses", entry.responderUid),
+              { posterSeen: true }
+            );
+          }
+
+          // direct分（ありがとう既読化）
           const unreadThanks = myRespondedOthers.filter(
             (req) =>
+              req.type === "direct" &&
               req.respondedBy === currentUid &&
               req.status === "matched" &&
               req.thanksSent &&
@@ -370,14 +558,41 @@ export default function NotificationsScreen() {
               thanksSeenAt: serverTimestamp(),
             });
           }
+
+          // group分（複数人対応：responses サブコレクション側を更新）
+          const unreadGroupThanks = myOwnResponses.filter(
+            (r) => r.thanksSent && r.thanksSeenByResponder !== true
+          );
+
+          for (const r of unreadGroupThanks) {
+            await updateDoc(
+              doc(db, "requests", r.requestId, "responses", currentUid),
+              {
+                thanksSeenByResponder: true,
+                thanksSeenAt: serverTimestamp(),
+              }
+            );
+          }
         } catch (error) {
           console.log("markThanksAsSeen error:", error.message);
         }
       };
 
       markThanksAsSeen();
-    }, [currentUid, myRespondedOthersKey])
+    }, [
+      currentUid,
+      myRespondedOthersKey,
+      myOwnResponsesKey,
+      directRespondedRequestsKey,
+      myPostResponsesKey,
+    ])
   );
+
+  const hasNothing =
+    directRespondedRequests.length === 0 &&
+    myPostResponses.length === 0 &&
+    myRespondedOthers.length === 0 &&
+    waitingRequests.length === 0;
 
   return (
     <ScrollView
@@ -389,20 +604,20 @@ export default function NotificationsScreen() {
       }}
     >
 
-      {/* 自分への返事 */}
-      {respondedRequests.length > 0 && (
+      {/* 自分への返事（direct） */}
+      {directRespondedRequests.length > 0 && (
         <YStack marginBottom="$5">
           <Text fontSize={14} fontWeight="700" color="#999" marginBottom="$2">
             あなたへのお返事
           </Text>
 
-          {respondedRequests.map((req) => {
+          {directRespondedRequests.map((req) => {
             const responderProfile = userProfiles[req.respondedBy] || {};
             const responderImage =
               req.respondedByPhotoURL || getProfileImage(responderProfile);
 
             return (
-              <Pressable key={req.id} onPress={() => openRequestDetail(req)}>
+              <Pressable key={req.id} onPress={() => openDirectRequestDetail(req)}>
                 <Card
                   backgroundColor="white"
                   borderRadius="$6"
@@ -476,6 +691,88 @@ export default function NotificationsScreen() {
         </YStack>
       )}
 
+      {/* 自分の投稿に来た回答（group、複数人ぶん個別カード） */}
+      {myPostResponses.length > 0 && (
+        <YStack marginBottom="$5">
+          <Text fontSize={14} fontWeight="700" color="#999" marginBottom="$2">
+            あなたの投稿への回答
+          </Text>
+
+          {myPostResponses.map((entry) => (
+            <Pressable
+              key={`${entry.requestId}-${entry.responderUid}`}
+              onPress={() => openMyPostResponse(entry)}
+            >
+              <Card
+                backgroundColor="white"
+                borderRadius="$6"
+                marginBottom="$3"
+                overflow="hidden"
+              >
+                <YStack
+                  backgroundColor={entry.thanksSent ? "#E6FBF5" : "#FFFBE6"}
+                  padding="$3"
+                  alignItems="center"
+                >
+                  <Text
+                    fontSize={18}
+                    fontWeight="700"
+                    color={entry.thanksSent ? "#2AA985" : "#B8860B"}
+                  >
+                    {entry.thanksSent
+                      ? "ありがとう送信済み"
+                      : "お返事が届きました！"}
+                  </Text>
+                </YStack>
+
+                <YStack padding="$4" gap="$3">
+                  <XStack justifyContent="space-between" alignItems="center">
+                    <Text fontSize={12} color="#999">
+                      投稿
+                    </Text>
+
+                    <DateBadge
+                      label={entry.thanksSent ? "完了" : "返信"}
+                      value={entry.thanksSent ? entry.thanksAt : entry.respondedAt}
+                    />
+                  </XStack>
+
+                  <XStack gap="$3" alignItems="center">
+                    <AvatarCircle
+                      imageUrl={entry.photoURL}
+                      name={entry.name}
+                      size={58}
+                      bg="#FFD966"
+                    />
+
+                    <YStack flex={1}>
+                      <Text fontSize={18} fontWeight="700" color="#111">
+                        {entry.name || "名前なし"}
+                        {entry.grade ? ` (${entry.grade})` : ""}
+                      </Text>
+
+                      <Text fontSize={17} fontWeight="700" color="#2AA985">
+                        「{entry.timingLabel || entry.timing}」で話せます
+                      </Text>
+
+                      {entry.thanksSent ? (
+                        <Text fontSize={13} color="#999">
+                          相手にありがとうを送りました
+                        </Text>
+                      ) : (
+                        <Text fontSize={13} color="#999">
+                          押してありがとうを送る
+                        </Text>
+                      )}
+                    </YStack>
+                  </XStack>
+                </YStack>
+              </Card>
+            </Pressable>
+          ))}
+        </YStack>
+      )}
+
       {/* 自分が返事したもの */}
       {myRespondedOthers.length > 0 && (
         <YStack marginBottom="$5">
@@ -487,6 +784,10 @@ export default function NotificationsScreen() {
             const fromProfile = userProfiles[req.fromUid] || {};
             const fromImage = req.fromPhotoURL || getProfileImage(fromProfile);
 
+            const myOwn = myOwnResponses.find((r) => r.requestId === req.id);
+            const thanksSent = req.type === "group" ? myOwn?.thanksSent : req.thanksSent;
+            const timingText = req.type === "group" ? (myOwn?.timingLabel || myOwn?.timing) : req.timing;
+
             return (
               <Card
                 key={req.id}
@@ -496,20 +797,16 @@ export default function NotificationsScreen() {
                 overflow="hidden"
               >
                 <YStack
-                  backgroundColor={
-                    req.status === "matched" ? "#E6FBF5" : "#FFFBE6"
-                  }
+                  backgroundColor={thanksSent ? "#E6FBF5" : "#FFFBE6"}
                   padding="$3"
                   alignItems="center"
                 >
                   <Text
                     fontSize={18}
                     fontWeight="700"
-                    color={req.status === "matched" ? "#2AA985" : "#B8860B"}
+                    color={thanksSent ? "#2AA985" : "#B8860B"}
                   >
-                    {req.status === "matched"
-                      ? "ありがとうが届きました！"
-                      : "お返事済み"}
+                    {thanksSent ? "ありがとうが届きました！" : "お返事済み"}
                   </Text>
                 </YStack>
 
@@ -520,11 +817,11 @@ export default function NotificationsScreen() {
                     </Text>
 
                     <DateBadge
-                      label={req.status === "matched" ? "ありがとう" : "返信"}
+                      label={thanksSent ? "ありがとう" : "返信"}
                       value={
-                        req.status === "matched"
-                          ? req.thanksAt
-                          : req.respondedAt
+                        thanksSent
+                          ? (req.type === "group" ? myOwn?.thanksAt : req.thanksAt)
+                          : (req.type === "group" ? myOwn?.respondedAt : req.respondedAt)
                       }
                     />
                   </XStack>
@@ -544,7 +841,7 @@ export default function NotificationsScreen() {
                       </Text>
 
                       <Text fontSize={13} color="#999">
-                        「{req.timing}」で返信済みです
+                        「{timingText}」で返信済みです
                       </Text>
                     </YStack>
                   </XStack>
@@ -568,55 +865,6 @@ export default function NotificationsScreen() {
                     ))}
                   </XStack>
 
-                  {/* <XStack gap="$2" alignItems="center">
-                    <Text fontSize={13} color="#777">
-                      状態:
-                    </Text>
-
-                    <Text
-                      fontSize={12}
-                      backgroundColor="#E0E0E0"
-                      paddingHorizontal="$2"
-                      paddingVertical="$1"
-                      borderRadius="$10"
-                    >
-                      {req.feelTag}
-                    </Text>
-                  </XStack> */}
-
-                  {/* {req.status === "matched" ? (
-                    <YStack gap="$2" marginTop="$1">
-                      <YStack
-                        backgroundColor="#E6FBF5"
-                        borderRadius="$4"
-                        padding="$3"
-                        alignItems="center"
-                      >
-                        <Text fontSize={13} color="#2AA985">
-                          {req.thanksFromName || "相手"}
-                          {req.thanksFromGrade
-                            ? ` (${req.thanksFromGrade})`
-                            : ""}
-                          さんから
-                        </Text>
-
-                        <Text fontSize={16} fontWeight="700" color="#2AA985">
-                          ありがとうが届きました！
-                        </Text>
-                      </YStack>
-
-                      <YStack
-                        backgroundColor="#F0FBF8"
-                        borderRadius="$4"
-                        padding="$3"
-                        alignItems="center"
-                      >
-                        <Text fontSize={14} color="#2AA985">
-                          {req.thanksMessage || "ありがとうございます！"}
-                        </Text>
-                      </YStack>
-                    </YStack>
-                  ) : null} */}
                 </YStack>
               </Card>
             );
@@ -775,13 +1023,11 @@ export default function NotificationsScreen() {
         </YStack>
       )}
 
-      {respondedRequests.length === 0 &&
-        myRespondedOthers.length === 0 &&
-        waitingRequests.length === 0 && (
-          <YStack alignItems="center" paddingTop="$10">
-            <Text color="#999">まだ通知はありません</Text>
-          </YStack>
-        )}
+      {hasNothing && (
+        <YStack alignItems="center" paddingTop="$10">
+          <Text color="#999">まだ通知はありません</Text>
+        </YStack>
+      )}
     </ScrollView>
   );
 }
