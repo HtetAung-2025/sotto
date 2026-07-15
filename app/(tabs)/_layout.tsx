@@ -1,19 +1,12 @@
 import { useEffect, useState } from "react";
 import { Tabs, useRouter } from "expo-router";
-import {
-  PlusCircle,
-  Bell,
-} from "@tamagui/lucide-icons-2";
+import { PlusCircle, Bell } from "@tamagui/lucide-icons-2";
+import { Image } from "expo-image";
 
-import { Image, Pressable, View, Text } from "react-native";
+import { Pressable, View, Text } from "react-native";
 
 import { onAuthStateChanged } from "firebase/auth";
-import {
-  collection,
-  onSnapshot,
-  Unsubscribe,
-  doc,
-} from "firebase/firestore";
+import { collection, onSnapshot, Unsubscribe, doc } from "firebase/firestore";
 
 import { auth, db } from "../../lib/firebase";
 
@@ -49,7 +42,7 @@ export default function TabLayout() {
             data.profileImage ||
             data.imageUrl ||
             data.avatarUrl ||
-            ""
+            "",
         );
       });
 
@@ -99,7 +92,7 @@ export default function TabLayout() {
           });
 
           setNotificationCount(count);
-        }
+        },
       );
     });
 
@@ -123,13 +116,13 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: true,
         headerTitleAlign: "center",
-        headerStyle: {height: 110},
+        headerStyle: { height: 110 },
         headerRight: () => (
           <Pressable
             onPress={() => router.push("/profile")}
             style={{
               marginRight: 16,
-              marginBottom: 4,
+              marginBottom: -4,
             }}
           >
             {photoURL ? (
@@ -170,24 +163,42 @@ export default function TabLayout() {
           </Pressable>
         ),
 
-        tabBarActiveTintColor: "#FFD966",
+        tabBarActiveTintColor: "#FFF",
         tabBarInactiveTintColor: "#999",
 
         tabBarStyle: {
           height: 80,
+          marginBottom: -12,
           paddingBottom: 12,
-          paddingTop: 8,
           backgroundColor: "#fff",
+          borderTopWidth: 0,
+        },
+
+        tabBarItemStyle: {
+          height: "100%",
+          overflow: "hidden",
+        },
+
+        tabBarIconStyle: {
+          marginTop: 5,
         },
       }}
     >
       <Tabs.Screen
         name="reservations"
         options={{
-          title: "投稿",
-          tabBarIcon: ({ color }) => (
-            <PlusCircle color={color} size={26} />
-          ),
+          title: "話しかける",
+          tabBarIcon: ({ color }) => 
+          <Image 
+              source={require("../../assets/images/reservations_icon.svg")} 
+              style={{ width: 35, height: 26, marginLeft: 5, tintColor: color }} 
+            />,
+          tabBarActiveBackgroundColor: "#B6B6B6",
+          tabBarInactiveBackgroundColor: "#fff",
+          tabBarItemStyle: {
+            borderTopRightRadius: 20,
+            overflow: "hidden",
+          },
         }}
       />
 
@@ -195,9 +206,17 @@ export default function TabLayout() {
         name="notifications"
         options={{
           title: "通知",
-          tabBarIcon: ({ color }) => (
-            <Bell color={color} size={24} />
-          ),
+          tabBarIcon: ({ color }) => 
+          <Image 
+            source={require("../../assets/images/notifications_icon.svg")} 
+            style={{ width: 31, height: 24, tintColor: color }} 
+          />,
+          tabBarActiveBackgroundColor: "#B6B6B6",
+          tabBarInactiveBackgroundColor: "#fff",
+          tabBarItemStyle: {
+            borderTopLeftRadius: 20,
+            overflow: "hidden",
+          },
           tabBarBadge: badge,
           tabBarBadgeStyle: {
             backgroundColor: "#E35A5A",
