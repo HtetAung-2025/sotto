@@ -123,7 +123,7 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: true,
         headerTitleAlign: "center",
-        headerStyle: {height: 110},
+        headerStyle: {height: 110,backgroundColor: "#F7F2EA"},
         headerRight: () => (
           <Pressable
             onPress={() => router.push("/profile")}
