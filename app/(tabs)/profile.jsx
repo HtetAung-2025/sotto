@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { Alert, Switch, Image, ScrollView } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { YStack, H1, Text, Button, XStack, Circle } from "tamagui";
+import { File, BookOpen, Edit3, Lightbulb, GraduationCap, Briefcase, Key, Music } from "@tamagui/lucide-icons-2";
 import { signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../../lib/firebase";
@@ -30,6 +31,28 @@ const getProfileImage = (profile) => {
     profile?.avatar ||
     ""
   );
+};
+
+const ICON_BY_NAME = {
+  File,
+  BookOpen,
+  Edit3,
+  Lightbulb,
+  GraduationCap,
+  Briefcase,
+  Key,
+  Music,
+};
+
+const DEFAULT_ICON_NAME = {
+  "授業・課題": "File",
+  "ソフト・教材": "BookOpen",
+  "作品・制作": "Edit3",
+  "プレゼン": "Lightbulb",
+  "学校生活": "GraduationCap",
+  "進路・就活": "Briefcase",
+  "経験談": "Key",
+  "雑談": "Music",
 };
 
 export default function SettingsScreen() {
@@ -182,6 +205,32 @@ export default function SettingsScreen() {
             </Text>
 
             <XStack flexWrap="wrap" gap="$2">
+<<<<<<< HEAD
+                {profile?.tags?.length > 0 ? (
+                  profile.tags.map((tag) => {
+                    const iconName = profile?.tagIcons?.[tag] || DEFAULT_ICON_NAME[tag];
+                    const Icon = ICON_BY_NAME[iconName];
+                    return (
+                      <XStack
+                        key={tag}
+                        backgroundColor="#FFF0C2"
+                        paddingHorizontal="$2"
+                        paddingVertical="$1"
+                        borderRadius="$10"
+                        alignItems="center"
+                        gap="$2"
+                      >
+                        {Icon ? <Icon size={16} color="#B8860B" /> : null}
+                        <Text fontSize={13} color="#B8860B">
+                          {tag}
+                        </Text>
+                      </XStack>
+                    );
+                  })
+                ) : (
+                  <Text color="#999">未設定</Text>
+                )}
+=======
               {profile?.tags?.length > 0 ? (
                 profile.tags.map((tag) => (
                   <Text
@@ -199,6 +248,7 @@ export default function SettingsScreen() {
               ) : (
                 <Text color="#999">未設定</Text>
               )}
+>>>>>>> origin/master
             </XStack>
           </YStack>
 

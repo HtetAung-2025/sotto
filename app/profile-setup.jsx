@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Alert, Image } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { YStack, XStack, H1, Text, Button, Input } from "tamagui";
+import { File, BookOpen, Edit3, Lightbulb, GraduationCap, Briefcase, Key, Music } from "@tamagui/lucide-icons-2";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import * as ImagePicker from "expo-image-picker";
@@ -32,6 +33,32 @@ const getProfileImage = (data) => {
   );
 };
 
+const ICON_FOR_TAG = {
+  "授業・課題": File,
+  "ソフト・教材": BookOpen,
+  "作品・制作": Edit3,
+  "プレゼン": Lightbulb,
+  "学校生活": GraduationCap,
+  "進路・就活": Briefcase,
+  "経験談": Key,
+  "雑談": Music,
+};
+
+const ICON_BY_NAME = {
+  File,
+  BookOpen,
+  Edit3,
+  Lightbulb,
+  GraduationCap,
+  Briefcase,
+  Key,
+  Music,
+};
+
+const DEFAULT_ICON_NAME = Object.fromEntries(
+  Object.entries(ICON_FOR_TAG).map(([k, v]) => [k, Object.keys(ICON_BY_NAME).find((n) => ICON_BY_NAME[n] === v)])
+);
+
 export default function ProfileSetup() {
   const params = useLocalSearchParams();
   const from = params?.from;
@@ -40,6 +67,8 @@ export default function ProfileSetup() {
   const [grade, setGrade] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
+  const [selectedTagIcons, setSelectedTagIcons] = useState({});
+  const [activeTagForIcon, setActiveTagForIcon] = useState(null);
 
   const [imageUri, setImageUri] = useState(null);
   const [imageBase64, setImageBase64] = useState(null);
@@ -65,6 +94,8 @@ export default function ProfileSetup() {
         setDisplayName(data.name || "");
         setSelectedTags(data.tags || []);
 
+        setSelectedTagIcons(data.tagIcons || {});
+
         const savedImage = getProfileImage(data) || null;
 
         setImageUri(savedImage);
@@ -77,9 +108,71 @@ export default function ProfileSetup() {
 
   const toggleTag = (tag) => {
     if (selectedTags.includes(tag)) {
-      setSelectedTags(selectedTags.filter((item) => item !== tag));
+      const newTags = selectedTags.filter((item) => item !== tag);
+      setSelectedTags(newTags);
+
+      // remove icon mapping for deselected tag
+      const newIcons = { ...selectedTagIcons };
+      if (newIcons[tag]) delete newIcons[tag];
+      setSelectedTagIcons(newIcons);
+
+      // persist removal immediately (tags + tagIcons)
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          setDoc(
+            doc(db, "users", user.uid),
+            { tags: newTags, tagIcons: newIcons },
+            { merge: true }
+          );
+        }
+      } catch (e) {
+        console.log("remove tag error:", e.message);
+      }
     } else {
-      setSelectedTags([...selectedTags, tag]);
+      const newTags = [...selectedTags, tag];
+      setSelectedTags(newTags);
+
+      // ensure default icon exists for newly selected tag
+      const newIcons = { ...selectedTagIcons };
+      if (!newIcons[tag]) {
+        newIcons[tag] = DEFAULT_ICON_NAME[tag] || Object.keys(ICON_BY_NAME)[0];
+        setSelectedTagIcons(newIcons);
+      }
+
+      // persist addition immediately (tags + tagIcons)
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          setDoc(
+            doc(db, "users", user.uid),
+            { tags: newTags, tagIcons: newIcons },
+            { merge: true }
+          );
+        }
+      } catch (e) {
+        console.log("add tag error:", e.message);
+      }
+    }
+  };
+
+  const openIconPicker = (tag) => {
+    setActiveTagForIcon(tag === activeTagForIcon ? null : tag);
+  };
+
+  const pickTagIcon = (tag, iconName) => {
+    const newIcons = { ...selectedTagIcons, [tag]: iconName };
+    setSelectedTagIcons(newIcons);
+    setActiveTagForIcon(null);
+
+    // persist immediately
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        setDoc(doc(db, "users", user.uid), { tagIcons: newIcons }, { merge: true });
+      }
+    } catch (e) {
+      console.log("save tagIcon error:", e.message);
     }
   };
 
@@ -166,6 +259,16 @@ export default function ProfileSetup() {
       // 選び直していない場合は前の画像をそのまま使う
       const photoURL = imageBase64 || oldPhotoURL || null;
 
+      // Ensure tagIcons contains defaults for selected tags
+      const tagIconsToSave = { ...selectedTagIcons };
+      selectedTags.forEach((t) => {
+        if (!tagIconsToSave[t]) {
+          tagIconsToSave[t] = DEFAULT_ICON_NAME[t] || Object.keys(ICON_BY_NAME)[0];
+        }
+      });
+
+      console.log("saving tagIcons:", tagIconsToSave);
+
       await setDoc(
         doc(db, "users", user.uid),
         {
@@ -175,6 +278,7 @@ export default function ProfileSetup() {
           name: displayName.trim(),
           grade,
           tags: selectedTags,
+          tagIcons: tagIconsToSave,
 
           photoURL,
           imageUrl: photoURL,
@@ -368,24 +472,60 @@ export default function ProfileSetup() {
               justifyContent="center"
               marginBottom="5"
             >
-              {TAGS.map((tag) => (
-                <Button
-                  key={tag}
-                  width={80}
-                  height={80}
-                  fontSize={12}
-                  padding={0}
-                  color="#000"
-                  backgroundColor={
-                    selectedTags.includes(tag) ? "#E8C75A" : "white"
-                  }
-                  borderWidth={1}
-                  borderColor="#CCC"
-                  onPress={() => toggleTag(tag)}
-                >
-                  {tag}
-                </Button>
-              ))}
+              {TAGS.map((tag) => {
+                const defaultIconName = DEFAULT_ICON_NAME[tag];
+                const iconName = selectedTagIcons[tag] || defaultIconName;
+                const Icon = ICON_BY_NAME[iconName];
+                return (
+                  <YStack key={tag} alignItems="center">
+                    <Button
+                      width={92}
+                      height={92}
+                      padding={10}
+                      borderRadius={12}
+                      color="#000"
+                      backgroundColor={
+                        selectedTags.includes(tag) ? "#E8C75A" : "white"
+                      }
+                      borderWidth={1}
+                      borderColor="#EEE"
+                      onPress={() => toggleTag(tag)}
+                      onLongPress={() => openIconPicker(tag)}
+                      alignItems="center"
+                      justifyContent="center"
+                    >
+                      <YStack alignItems="center" justifyContent="center" gap={6}>
+                        {Icon ? (
+                          <Icon size={28} color={selectedTags.includes(tag) ? "#111" : "#333"} />
+                        ) : null}
+                        <Text fontSize={12} lineHeight={14} textAlign="center">
+                          {tag}
+                        </Text>
+                      </YStack>
+                    </Button>
+
+                    {activeTagForIcon === tag && (
+                      <XStack gap="$2" marginTop="$2">
+                        {Object.keys(ICON_BY_NAME).map((name) => {
+                          const Cmp = ICON_BY_NAME[name];
+                          return (
+                            <Button
+                              key={name}
+                              width={44}
+                              height={44}
+                              borderRadius={8}
+                              backgroundColor={selectedTagIcons[tag] === name ? "#E8C75A" : "white"}
+                              onPress={() => pickTagIcon(tag, name)}
+                            >
+                              <Cmp size={18} color="#333" />
+                            </Button>
+                          );
+                        })}
+                      </XStack>
+                    )}
+                  </YStack>
+                );
+              })}
             </XStack>
           </YStack>
         )}

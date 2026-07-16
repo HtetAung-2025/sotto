@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Alert, ScrollView, Image, Pressable } from "react-native";
 import { YStack, XStack, Text, Button, Card } from "tamagui";
+import { File, Edit3, BookOpen, GraduationCap, Key, Briefcase, Lightbulb, Music } from "@tamagui/lucide-icons-2";
 import {
   collection,
   addDoc,
@@ -52,6 +53,28 @@ const getProfileImage = (data) => {
     data?.profileImageUrl ||
     ""
   );
+};
+
+const ICON_BY_NAME = {
+  File,
+  Edit3,
+  BookOpen,
+  GraduationCap,
+  Key,
+  Briefcase,
+  Lightbulb,
+  Music,
+};
+
+const DEFAULT_ICON_NAME = {
+  "授業・課題": "File",
+  "制作・作品づくり": "Edit3",
+  "ソフト・機材": "BookOpen",
+  "学校生活": "GraduationCap",
+  "経験談": "Key",
+  "就活・進路": "Briefcase",
+  "発表・プレゼン": "Lightbulb",
+  "雑談": "Music",
 };
 
 function ResponderAvatar({ name, photoURL, size = 80 }) {
@@ -390,7 +413,7 @@ export default function Reservations() {
     return (
       <YStack
         flex={1}
-        backgroundColor="#F3F3F3"
+        backgroundColor="#F7F2EA"
         alignItems="center"
         justifyContent="center"
       >
@@ -402,7 +425,7 @@ export default function Reservations() {
   // ===== 投稿中の相談がある → リクエスト画面を表示 =====
   if (myActivePost) {
     return (
-      <YStack flex={1} backgroundColor="#F3F3F3">
+      <YStack flex={1} backgroundColor="#F7F2EA">
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
@@ -419,40 +442,39 @@ export default function Reservations() {
             </YStack>
 
             {/* フィルター */}
-            <XStack gap="$2" flexWrap="wrap" justifyContent="center">
-              {FILTERS.map((f) => (
-                <Button
-                  key={f.key}
-                  size="$3"
-                  borderRadius="$10"
-                  backgroundColor={activeFilter === f.key ? "#333" : "#EDEAE3"}
-                  color={activeFilter === f.key ? "white" : "#999"}
-                  fontWeight="700"
-                  onPress={() => setActiveFilter(f.key)}
-                >
-                  {f.label}
-                </Button>
-              ))}
-            </XStack>
-
-            <Text color="#999" fontSize={14}>
-              最新の投稿に回答してくれた人です
-            </Text>
-
-            {/* 自分の投稿カード + キャンセル */}
-            <Card
-              backgroundColor="white"
-              borderRadius="$6"
-              padding="$4"
-              gap="$4"
-              alignItems="center"
-            >
-              <XStack
-                alignItems="center"
-                gap="$2"
-                flexWrap="wrap"
-                alignSelf="flex-start"
-              >
+            <Card backgroundColor="white" borderRadius="$6" padding="$4" gap="$4">
+              <XStack gap="$2" flexWrap="wrap" justifyContent="center">
+                {TALK_TAGS.map((tag) => {
+                  const iconName = myData?.tagIcons?.[tag] || DEFAULT_ICON_NAME[tag];
+                  const Icon = ICON_BY_NAME[iconName];
+                  return (
+                    <Button
+                      key={tag}
+                      width={92}
+                      height={92}
+                      padding={10}
+                      borderRadius={12}
+                      backgroundColor={
+                        talkTags.includes(tag) ? "#E8C75A" : "white"
+                      }
+                      borderWidth={1}
+                      borderColor="#EEE"
+                      color={talkTags.includes(tag) ? "white" : "#999"}
+                      onPress={() => toggleTalkTag(tag)}
+                      alignItems="center"
+                      justifyContent="center"
+                    >
+                      <YStack alignItems="center" justifyContent="center" gap={6}>
+                        {Icon ? (
+                          <Icon size={28} color={talkTags.includes(tag) ? "#111" : "#333"} />
+                        ) : null}
+                        <Text fontSize={12} lineHeight={14} textAlign="center">
+                          {tag}
+                        </Text>
+                      </YStack>
+                    </Button>
+                  );
+                })}
                 <YStack
                   width={10}
                   height={10}
@@ -558,7 +580,7 @@ export default function Reservations() {
 
   // ===== 投稿中の相談がない → 通常の投稿フォームを表示 =====
   return (
-    <YStack flex={1} backgroundColor="#F3F3F3">
+    <YStack flex={1} backgroundColor="#F7F2EA">
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
@@ -593,23 +615,38 @@ export default function Reservations() {
                 <Text fontSize={11}> ※3つまで選択できます。</Text>
               </Text>
 
-              <XStack flexWrap="wrap" gap="$2">
-                {TALK_TAGS.map((tag) => (
-                  <Button
-                    key={tag}
-                    size="$2"
-                    borderRadius="$10"
-                    backgroundColor={
-                      talkTags.includes(tag) ? "#E8C75A" : "white"
-                    }
-                    borderWidth={1}
-                    borderColor="#CCC"
-                    color={talkTags.includes(tag) ? "white" : "#999"}
-                    onPress={() => toggleTalkTag(tag)}
-                  >
-                    {tag}
-                  </Button>
-                ))}
+              <XStack flexWrap="wrap" gap="$2" justifyContent="center" alignItems="center">
+                {TALK_TAGS.map((tag) => {
+                  const iconName = myData?.tagIcons?.[tag] || DEFAULT_ICON_NAME[tag];
+                  const Icon = ICON_BY_NAME[iconName];
+                  return (
+                    <Button
+                      key={tag}
+                      width={92}
+                      height={92}
+                      padding={10}
+                      borderRadius={12}
+                      backgroundColor={
+                        talkTags.includes(tag) ? "#E8C75A" : "white"
+                      }
+                      borderWidth={1}
+                      borderColor="#EEE"
+                      color={talkTags.includes(tag) ? "white" : "#999"}
+                      onPress={() => toggleTalkTag(tag)}
+                      alignItems="center"
+                      justifyContent="center"
+                    >
+                      <YStack alignItems="center" justifyContent="center" gap={6}>
+                        {Icon ? (
+                          <Icon size={28} color={talkTags.includes(tag) ? "#111" : "#333"} />
+                        ) : null}
+                        <Text fontSize={13} lineHeight={14} textAlign="center">
+                          {tag}
+                        </Text>
+                      </YStack>
+                    </Button>
+                  );
+                })}
               </XStack>
             </YStack>
           </Card>

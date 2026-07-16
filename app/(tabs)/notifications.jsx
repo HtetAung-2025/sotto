@@ -596,7 +596,7 @@ export default function NotificationsScreen() {
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: "#F3F3F3" }}
+      style={{ flex: 1, backgroundColor: "#F7F2EA" }}
       contentContainerStyle={{
         padding: 16,
         paddingTop: 60,
