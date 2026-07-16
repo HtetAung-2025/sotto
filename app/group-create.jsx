@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Alert } from "react-native";
 import { router } from "expo-router";
 import { YStack, XStack, Text, Input, Button } from "tamagui";
+import { Image } from "expo-image";
 import { Users } from "@tamagui/lucide-icons-2";
 import {
   addDoc,
@@ -78,87 +79,86 @@ export default function GroupCreate() {
   };
 
   return (
-    <YStack flex={1} backgroundColor="#F3F3F3">
-      <XStack
-        height={86}
-        backgroundColor="white"
-        alignItems="center"
-        justifyContent="center"
-        borderBottomWidth={1}
-        borderBottomColor="#EEE"
-      >
-        <Text
-          position="absolute"
-          left="$4"
-          fontSize={34}
-          color="#BBB"
-          onPress={() => {
-            if (step === 1) {
-              router.back();
-            } else {
-              setStep(1);
-            }
-          }}
-        >
-          ‹
-        </Text>
-
-        <XStack alignItems="center" gap="$2">
-          <Users color="#FFD966" size={28} />
-          <Text fontSize={24} fontWeight="700">
-            グループ作成
-          </Text>
-        </XStack>
-      </XStack>
+    <YStack flex={1} backgroundColor="#FFF">
 
       <YStack flex={1} justifyContent="center" padding="$5">
         {step === 1 && (
           <YStack gap="$5" alignItems="center">
-            <Text fontSize={22} fontWeight="700">
-              新しいグループを作成
+
+            <Text fontSize={24} fontWeight="700" marginBottom={50}>
+              グループ作成
             </Text>
 
-            <Text width="82%" fontSize={14} color="#666" lineHeight={22}>
-              同じグループの人と相談を共有できます。
-              グループ名を入力してください。
+            <Text fontSize={20} alignItems="center">
+              グループ名を記入してください
+            </Text>
+
+            <Text width="85%" fontSize={14} color="#666" lineHeight={22} marginBottom={15}>
+              学校名や学部、学科名などでも構いません。
             </Text>
 
             <Input
               width="100%"
               height={54}
               backgroundColor="white"
-              placeholder="例：AW / Webデザイン2年"
+              placeholder="例)Webデザイン科"
               value={groupName}
               onChangeText={setGroupName}
+              backgroundColor="#F2F2F2"
+              border="#B6B6B6"
+              placeholderTextColor="#B6B6B6"
+              marginBottom={260}
             />
 
             <Button
               marginTop="$8"
-              width="70%"
-              height={58}
+              width="95%"
+              height={50}
               borderRadius="$10"
               backgroundColor="#FFD966"
               color="black"
-              fontSize={22}
+              fontSize={20}
               fontWeight="700"
               onPress={createGroup}
               disabled={creating}
               opacity={creating ? 0.6 : 1}
             >
-              {creating ? "作成中..." : "作成する"}
+              次へ
             </Button>
 
-            <XStack gap="$3" marginTop="$10">
+            <Text
+            color="#B6B6B6"
+            onPress={() => {
+              if (step === 1) {
+                router.back();
+              } else {
+                setStep(1);
+              }
+            }}>
+              １つ前に戻る
+            </Text>
+
+            {/* <XStack gap="$3" marginTop="$10">
               <Text color="#999">●</Text>
               <Text color="#DDD">○</Text>
-            </XStack>
+            </XStack> */}
           </YStack>
         )}
 
         {step === 2 && (
           <YStack gap="$5" alignItems="center">
-            <Text fontSize={22} fontWeight="700">
-              グループを作成しました
+            <Text fontSize={22} fontWeight="700" marginBottom={50}>
+              グループ作成
+            </Text>
+
+            <Text fontSize={20}>
+              グループコードはこちら
+            </Text>
+
+            <Text width="85%" fontSize={13} color="#666" lineHeight={21} textAlign="center">
+              参加してほしい方にこのコードを共有し、
+              {"\n"}
+              コードを入力してもらうことで参加できます。
             </Text>
 
             <Text fontSize={15} color="#666">
@@ -180,35 +180,51 @@ export default function GroupCreate() {
               </Text>
             </YStack>
 
-            <Text width="76%" fontSize={13} color="#666" lineHeight={21}>
-              参加してほしい人にこのコードを教えてください。
-              相手は「グループ参加」からこのコードを入力すると参加できます。
-            </Text>
-
-            <YStack
-              width="80%"
-              height={1}
-              backgroundColor="#D9D9D9"
-              marginVertical="$6"
-            />
+            <XStack backgroundColor="#DBDBDB" padding={15} borderRadius={10} marginBottom={137}>
+              <Image
+              source={require("../assets/images/danger_mark.svg")}
+              style={{
+                width: 35,
+                height: 31,
+                marginTop: 5,
+              }}>
+              </Image>
+              <Text marginLeft={5}>
+                このグループコードは再表示できません
+                {"\n"}
+                必ず保存してください
+              </Text>
+            </XStack>
 
             <Button
-              width="70%"
-              height={58}
+              width="95%"
+              height={50}
               borderRadius="$10"
               backgroundColor="#FFD966"
               color="black"
-              fontSize={22}
+              fontSize={20}
               fontWeight="700"
               onPress={goToApp}
             >
-              はじめる
+              次へ
             </Button>
 
-            <XStack gap="$3" marginTop="$4">
+            <Text
+            color="#B6B6B6"
+            onPress={() => {
+              if (step === 1) {
+                router.back();
+              } else {
+                setStep(1);
+              }
+            }}>
+              １つ前に戻る
+            </Text>
+
+            {/* <XStack gap="$3" marginTop="$4">
               <Text color="#DDD">○</Text>
               <Text color="#999">●</Text>
-            </XStack>
+            </XStack> */}
           </YStack>
         )}
       </YStack>

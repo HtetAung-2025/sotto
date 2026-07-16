@@ -118,6 +118,7 @@ export default function GroupJoin() {
             backgroundColor="#F2F2F2"
             border="#B6B6B6"
             placeholderTextColor="#B6B6B6"
+            marginBottom={280}
           />
 
           <Button

@@ -142,8 +142,16 @@ export default function SettingsScreen() {
           paddingBottom: 100,
         }}
       >
-        <YStack alignItems="center" gap="$5" width="100%">
-          <H1 fontSize={28}>設定</H1>
+        <YStack alignItems="center" gap="$5" width="100%" marginTop={-50}>
+          <Text
+          position="absolute"
+          left="$4"
+          fontSize={34}
+          color="#BBB"
+          onPress={() => router.back()}>
+            ‹
+          </Text>
+          <H1 fontSize={20} color="#000">設定</H1>
 
           <Circle
             size={100}
@@ -188,18 +196,16 @@ export default function SettingsScreen() {
 
           <YStack
             width="80%"
-            backgroundColor="white"
             borderRadius="$5"
             padding="$4"
             gap="$3"
-            borderWidth={1}
-            borderColor="#DDD"
           >
-            <Text fontSize={18} fontWeight="700">
-              得意なこと
+            <Text fontSize={18} fontWeight="700" color="#000">
+              力になれること
             </Text>
 
             <XStack flexWrap="wrap" gap="$2">
+<<<<<<< HEAD
                 {profile?.tags?.length > 0 ? (
                   profile.tags.map((tag) => {
                     const iconName = profile?.tagIcons?.[tag] || DEFAULT_ICON_NAME[tag];
@@ -224,6 +230,25 @@ export default function SettingsScreen() {
                 ) : (
                   <Text color="#999">未設定</Text>
                 )}
+=======
+              {profile?.tags?.length > 0 ? (
+                profile.tags.map((tag) => (
+                  <Text
+                    key={tag}
+                    backgroundColor="#FFF"
+                    color="#000"
+                    paddingHorizontal="$2"
+                    paddingVertical="$1"
+                    borderRadius="$10"
+                    fontSize={13}
+                  >
+                    {tag}
+                  </Text>
+                ))
+              ) : (
+                <Text color="#999">未設定</Text>
+              )}
+>>>>>>> origin/master
             </XStack>
           </YStack>
 
@@ -266,33 +291,35 @@ export default function SettingsScreen() {
 
           <YStack
             width="80%"
-            backgroundColor="white"
             borderRadius="$5"
             padding="$4"
             gap="$3"
-            borderWidth={1}
-            borderColor="#DDD"
           >
-            <Text fontSize={18} fontWeight="700">
+            <Text fontSize={18} fontWeight="700" color="#000">
               通知設定
             </Text>
 
             <XStack alignItems="center" justifyContent="space-between">
-              <Text fontSize={16} color="#555">
-                プッシュ通知
+              <Text fontSize={16} color="#B6B6B6">
+                OFF/ON
               </Text>
 
-              <Switch value={notificationOn} onValueChange={toggleNotification} />
+              <Switch value={notificationOn} onValueChange={toggleNotification} value={notificationOn}
+                onValueChange={toggleNotification}
+                trackColor={{ false: '#767577', true: '#FCF0CD' }}
+                thumbColor={notificationOn ? '#FFDF78' : '#F4F3F4'}
+                ios_backgroundColor="#3E3E3E"/>
             </XStack>
           </YStack>
 
           <Button
-            width="80%"
+            width="55%"
             height={58}
             borderRadius="$10"
-            backgroundColor="#FFD966"
-            color="black"
-            fontSize={20}
+            backgroundColor="#000"
+            color="#FFF"
+            fontSize={16
+            }
             fontWeight="700"
             onPress={handleLogout}
           >
