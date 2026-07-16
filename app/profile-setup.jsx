@@ -245,8 +245,8 @@ export default function ProfileSetup() {
         </XStack>
 
         {step === 1 && (
-          <YStack width="80%" alignItems="center">
-            <Text fontSize={20}>学科を選んでください</Text>
+          <YStack width="80%" alignItems="center" marginBottom={5}>
+            <Text fontSize={20} marginBottom={15}>学科を選んでください</Text>
             <Text marginBottom="40" fontSize={14}>
               &#8251;後から変更可能です。
             </Text>
@@ -261,7 +261,7 @@ export default function ProfileSetup() {
                 backgroundColor={grade === item ? "#FFDF78" : "white"}
                 color="black"
                 borderWidth={1}
-                marginBottom={30}
+                marginBottom={25}
                 onPress={() => setGrade(item)}
               >
                 {item}
@@ -316,6 +316,10 @@ export default function ProfileSetup() {
               &#8251;後から変更可能です。
             </Text>
 
+            <Text marginBottom={-15}>
+              メールアドレス
+            </Text>
+
             <Input
               width={320}
               value={auth.currentUser?.email || ""}
@@ -323,16 +327,19 @@ export default function ProfileSetup() {
               backgroundColor="#F2F2F2"
               border="#B6B6B6"
               color="#000"
+              marginBottom={25}
             />
 
-            <Text>表示名　※誰でもわかる名前（本名）にしましょう</Text>
+            <Text marginBottom={-15}>
+              表示名　※誰でもわかる名前（本名）にしましょう
+            </Text>
 
             <Input
               width={320}
               placeholder="表示名を記入してください"
               value={displayName}
               onChangeText={setDisplayName}
-              marginBottom={111}
+              marginBottom={79}
               backgroundColor="#F2F2F2"
               border="#B6B6B6"
               color="#000"
@@ -350,7 +357,7 @@ export default function ProfileSetup() {
             <Text textAlign="center" marginBottom="10" fontSize={14}>
               &#8251;後から変更可能です。
             </Text>
-            <Text textAlign="center" marginBottom="10">
+            <Text textAlign="center" marginBottom="10" color="#B6B6B6">
               ※３つまで選択することができます。
             </Text>
 
@@ -386,7 +393,7 @@ export default function ProfileSetup() {
         <Button
           marginTop="100"
           alignSelf="center"
-          width="70%"
+          width="65%"
           height={52}
           borderRadius={35}
           backgroundColor="#FFDF78"
