@@ -143,16 +143,6 @@ export default function SettingsScreen() {
         }}
       >
         <YStack alignItems="center" gap="$5" width="100%" marginTop={-50}>
-          <Text
-          position="absolute"
-          left="$4"
-          fontSize={34}
-          color="#BBB"
-          onPress={() => router.back()}>
-            ‹
-          </Text>
-          <H1 fontSize={20} color="#000">設定</H1>
-
           <Circle
             size={100}
             backgroundColor="#FFD966"
@@ -205,50 +195,30 @@ export default function SettingsScreen() {
             </Text>
 
             <XStack flexWrap="wrap" gap="$2">
-<<<<<<< HEAD
-                {profile?.tags?.length > 0 ? (
-                  profile.tags.map((tag) => {
-                    const iconName = profile?.tagIcons?.[tag] || DEFAULT_ICON_NAME[tag];
-                    const Icon = ICON_BY_NAME[iconName];
-                    return (
-                      <XStack
-                        key={tag}
-                        backgroundColor="#FFF0C2"
-                        paddingHorizontal="$2"
-                        paddingVertical="$1"
-                        borderRadius="$10"
-                        alignItems="center"
-                        gap="$2"
-                      >
-                        {Icon ? <Icon size={16} color="#B8860B" /> : null}
-                        <Text fontSize={13} color="#B8860B">
-                          {tag}
-                        </Text>
-                      </XStack>
-                    );
-                  })
-                ) : (
-                  <Text color="#999">未設定</Text>
-                )}
-=======
               {profile?.tags?.length > 0 ? (
-                profile.tags.map((tag) => (
-                  <Text
-                    key={tag}
-                    backgroundColor="#FFF"
-                    color="#000"
-                    paddingHorizontal="$2"
-                    paddingVertical="$1"
-                    borderRadius="$10"
-                    fontSize={13}
-                  >
-                    {tag}
-                  </Text>
-                ))
+                profile.tags.map((tag) => {
+                  const iconName = profile?.tagIcons?.[tag] || DEFAULT_ICON_NAME[tag];
+                  const Icon = ICON_BY_NAME[iconName];
+                  return (
+                    <XStack
+                      key={tag}
+                      backgroundColor="#FFF0C2"
+                      paddingHorizontal="$2"
+                      paddingVertical="$1"
+                      borderRadius="$10"
+                      alignItems="center"
+                      gap="$2"
+                    >
+                      {Icon ? <Icon size={16} color="#B8860B" /> : null}
+                      <Text fontSize={13} color="#B8860B">
+                        {tag}
+                      </Text>
+                    </XStack>
+                  );
+                })
               ) : (
                 <Text color="#999">未設定</Text>
               )}
->>>>>>> origin/master
             </XStack>
           </YStack>
 
@@ -271,7 +241,7 @@ export default function SettingsScreen() {
                 })
               }
             >
-              プロフィールを編集する 〉
+              プロフィールを編集する      〉
             </Button>
 
             <Button
@@ -285,7 +255,7 @@ export default function SettingsScreen() {
               borderColor="#DDD"
               onPress={() => router.push("/group")}
             >
-              グループを変更する 〉
+              グループを変更する       〉
             </Button>
           </YStack>
 

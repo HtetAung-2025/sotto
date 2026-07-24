@@ -73,7 +73,7 @@ export default function GroupJoin() {
       Alert.alert("参加しました", `${groupData.name} に参加しました`, [
         {
           text: "OK",
-          onPress: () => router.replace("/(tabs)/reservations"),
+          onPress: () => router.replace("/reservations"),
         },
       ]);
     } catch (error) {

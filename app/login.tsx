@@ -37,7 +37,7 @@ export default function LoginScreen() {
       }
 
       // テスト用：常に通知画面へ
-      router.replace("/allow-notifications");
+      router.replace("/reservations");
     } catch (error: any) {
       Alert.alert("Role Check Failed", error.message);
     }
@@ -113,7 +113,7 @@ export default function LoginScreen() {
         }}
       >
         <Image
-          source={require("../assets/images/logo.svg")}
+          source={require("../assets/images/logo.png")}
           style={{
             width: 70,
             height: 60,

@@ -77,6 +77,27 @@ const DEFAULT_ICON_NAME = {
   "雑談": "Music",
 };
 
+function TagPill({ tag }) {
+  const iconName = DEFAULT_ICON_NAME[tag];
+  const Icon = ICON_BY_NAME[iconName];
+
+  return (
+    <XStack
+      backgroundColor="#E8C75A"
+      paddingHorizontal="$3"
+      paddingVertical="$1"
+      borderRadius="$10"
+      alignItems="center"
+      gap="$1"
+    >
+      {Icon ? <Icon size={14} color="white" /> : null}
+      <Text color="white" fontSize={13} fontWeight="700">
+        {tag}
+      </Text>
+    </XStack>
+  );
+}
+
 function ResponderAvatar({ name, photoURL, size = 80 }) {
   if (photoURL) {
     return (
@@ -435,46 +456,26 @@ export default function Reservations() {
           }}
         >
           <YStack gap="$4">
-            <YStack alignItems="center" marginBottom="$2">
-              <Text fontSize={28} fontWeight="800" color="#222">
-                リクエスト
-              </Text>
-            </YStack>
-
             {/* フィルター */}
-            <Card backgroundColor="white" borderRadius="$6" padding="$4" gap="$4">
-              <XStack gap="$2" flexWrap="wrap" justifyContent="center">
-                {TALK_TAGS.map((tag) => {
-                  const iconName = myData?.tagIcons?.[tag] || DEFAULT_ICON_NAME[tag];
-                  const Icon = ICON_BY_NAME[iconName];
-                  return (
-                    <Button
-                      key={tag}
-                      width={92}
-                      height={92}
-                      padding={10}
-                      borderRadius={12}
-                      backgroundColor={
-                        talkTags.includes(tag) ? "#E8C75A" : "white"
-                      }
-                      borderWidth={1}
-                      borderColor="#EEE"
-                      color={talkTags.includes(tag) ? "white" : "#999"}
-                      onPress={() => toggleTalkTag(tag)}
-                      alignItems="center"
-                      justifyContent="center"
-                    >
-                      <YStack alignItems="center" justifyContent="center" gap={6}>
-                        {Icon ? (
-                          <Icon size={28} color={talkTags.includes(tag) ? "#111" : "#333"} />
-                        ) : null}
-                        <Text fontSize={12} lineHeight={14} textAlign="center">
-                          {tag}
-                        </Text>
-                      </YStack>
-                    </Button>
-                  );
-                })}
+
+            <Text color="#999" fontSize={14}>
+              最新の投稿に回答してくれた人です
+            </Text>
+
+            {/* 自分の投稿カード + キャンセル */}
+            <Card
+              backgroundColor="white"
+              borderRadius="$6"
+              padding="$4"
+              gap="$4"
+              alignItems="center"
+            >
+              <XStack
+                alignItems="center"
+                gap="$2"
+                flexWrap="wrap"
+                alignSelf="flex-start"
+              >
                 <YStack
                   width={10}
                   height={10}
@@ -487,18 +488,7 @@ export default function Reservations() {
 
                 {Array.isArray(myActivePost.talkTags) &&
                   myActivePost.talkTags.map((tag) => (
-                    <Text
-                      key={tag}
-                      backgroundColor="#E8C75A"
-                      color="white"
-                      paddingHorizontal="$3"
-                      paddingVertical="$1"
-                      borderRadius="$10"
-                      fontSize={13}
-                      fontWeight="700"
-                    >
-                      {tag}
-                    </Text>
+                    <TagPill key={tag} tag={tag} />
                   ))}
               </XStack>
 
@@ -517,6 +507,21 @@ export default function Reservations() {
                 {cancelling ? "処理中..." : "キャンセル"}
               </Button>
             </Card>
+            <XStack gap="$2" flexWrap="wrap" justifyContent="center">
+              {FILTERS.map((f) => (
+                <Button
+                  key={f.key}
+                  size="$3"
+                  borderRadius="$10"
+                  backgroundColor={activeFilter === f.key ? "#333" : "#EDEAE3"}
+                  color={activeFilter === f.key ? "white" : "#999"}
+                  fontWeight="700"
+                  onPress={() => setActiveFilter(f.key)}
+                >
+                  {f.label}
+                </Button>
+              ))}
+            </XStack>
 
             {/* 回答者一覧 or 空メッセージ */}
             {filteredResponders.length > 0 ? (

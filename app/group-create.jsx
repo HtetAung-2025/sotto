@@ -75,7 +75,7 @@ export default function GroupCreate() {
   };
 
   const goToApp = () => {
-    router.replace("/(tabs)/reservations");
+    router.replace("/reservations");
   };
 
   return (
