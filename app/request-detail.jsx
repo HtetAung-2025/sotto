@@ -69,6 +69,27 @@ function AvatarCircle({ imageUrl, name, size = 80 }) {
   );
 }
 
+function TagPill({ tag }) {
+  const iconName = DEFAULT_ICON_NAME[tag];
+  const Icon = ICON_BY_NAME[iconName];
+
+  return (
+    <XStack
+      backgroundColor="#E8C75A"
+      paddingHorizontal="$2"
+      paddingVertical="$1"
+      borderRadius="$10"
+      alignItems="center"
+      gap="$1"
+    >
+      {Icon ? <Icon size={14} color="white" /> : null}
+      <Text color="white" fontSize={12}>
+        {tag}
+      </Text>
+    </XStack>
+  );
+}
+
 export default function RequestDetail() {
   const params = useLocalSearchParams();
 
