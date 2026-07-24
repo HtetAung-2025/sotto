@@ -13,7 +13,7 @@ export default function Group() {
     >
       <YStack alignItems="center" gap="$5">
         <Image
-          source={require("../assets/images/logo.svg")}
+          source={require("../assets/images/logo.png")}
           style={{
             width: 70,
             height: 60,

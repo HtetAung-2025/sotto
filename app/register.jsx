@@ -36,7 +36,7 @@ export default function Register() {
       Alert.alert("Register Success", user.email || "", [
         {
           text: "OK",
-          onPress: () => router.push("/profile-setup"),
+          onPress: () => router.push("/onboarding"),
         },
       ]);
     } catch (error) {
@@ -53,7 +53,7 @@ export default function Register() {
       backgroundColor="#FFF"
     >
       <Image
-        source={require("../assets/images/logo.svg")}
+        source={require("../assets/images/logo.png")}
         style={{
           width: 70,
           height: 60,

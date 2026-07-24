@@ -236,6 +236,14 @@ export default function TabLayout() {
           href: null,
           title: "プロフィール",
           headerRight: () => null,
+          headerLeft: () => (
+            <Pressable
+              onPress={() => router.back()}
+              style={{ marginLeft: 16 }}
+            >
+              <Text style={{ fontSize: 32, color: "#BBB" }}>‹</Text>
+            </Pressable>
+          ),
         }}
       />
 

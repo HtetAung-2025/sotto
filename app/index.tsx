@@ -13,7 +13,7 @@ export default function LogoScreen() {
       gap="$6"
     >
       <Image
-        source={require("../assets/logo.png")}
+        source={require("../assets/images/logo.png")}
         style={{
           width: 160,
           height: 160,
@@ -24,7 +24,7 @@ export default function LogoScreen() {
 
       <YStack alignItems="center" gap="$2">
         <Text fontSize={28} fontWeight="800" color="#222">
-          アプリ名
+          sotto
         </Text>
 
         <Text fontSize={14} color="#777" textAlign="center">

@@ -1,11 +1,34 @@
 import { useState, useEffect } from "react";
 import { Alert, ScrollView, Image } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { YStack, XStack, Text, Button, Input, Card } from "tamagui";
-import { doc, updateDoc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import { YStack, XStack, Text, Button, Card } from "tamagui";
+import { File, Edit3, BookOpen, GraduationCap, Key, Briefcase, Lightbulb, Music } from "@tamagui/lucide-icons-2";
+import { doc, updateDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { db, auth } from "../lib/firebase";
 
 const THANKS_MESSAGE = "ありがとうございます！よろしくお願いします。";
+
+const ICON_BY_NAME = {
+  File,
+  Edit3,
+  BookOpen,
+  GraduationCap,
+  Key,
+  Briefcase,
+  Lightbulb,
+  Music,
+};
+
+const DEFAULT_ICON_NAME = {
+  "授業・課題": "File",
+  "制作・作品づくり": "Edit3",
+  "ソフト・機材": "BookOpen",
+  "学校生活": "GraduationCap",
+  "経験談": "Key",
+  "就活・進路": "Briefcase",
+  "発表・プレゼン": "Lightbulb",
+  "雑談": "Music",
+};
 
 const getParam = (value, fallback = "") => {
   if (Array.isArray(value)) return value[0] || fallback;
@@ -69,20 +92,67 @@ function AvatarCircle({ imageUrl, name, size = 80 }) {
   );
 }
 
+// 小さめのタグピル（力になってくれること用）
+function SmallTagPill({ tag }) {
+  const iconName = DEFAULT_ICON_NAME[tag];
+  const Icon = ICON_BY_NAME[iconName];
+
+  return (
+    <XStack
+      backgroundColor="white"
+      borderWidth={1}
+      borderColor="#EEE"
+      paddingHorizontal="$3"
+      paddingVertical="$2"
+      borderRadius="$4"
+      alignItems="center"
+      gap="$2"
+    >
+      {Icon ? <Icon size={16} color="#333" /> : null}
+      <Text color="#333" fontSize={13} fontWeight="600">
+        {tag}
+      </Text>
+    </XStack>
+  );
+}
+
+// 大きめのアイコンボックス（話したいこと用）
+function BigTagBox({ tag }) {
+  const iconName = DEFAULT_ICON_NAME[tag];
+  const Icon = ICON_BY_NAME[iconName];
+
+  return (
+    <YStack
+      width={92}
+      height={92}
+      borderRadius={12}
+      backgroundColor="white"
+      borderWidth={1}
+      borderColor="#EEE"
+      alignItems="center"
+      justifyContent="center"
+      gap={6}
+      padding={10}
+    >
+      {Icon ? <Icon size={28} color="#333" /> : null}
+      <Text fontSize={13} lineHeight={14} textAlign="center" color="#333">
+        {tag}
+      </Text>
+    </YStack>
+  );
+}
+
 export default function RequestDetail() {
   const params = useLocalSearchParams();
 
   const requestId = getParam(params.id);
-  const responderUidParam = getParam(params.responderUid);
-
   const [requestData, setRequestData] = useState(null);
-  const [responseData, setResponseData] = useState(null); // 複数人対応：この回答者個別のデータ
-  const [responderProfile, setResponderProfile] = useState(null);
+  const [responderData, setResponderData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadRequest();
-  }, [requestId, responderUidParam]);
+  }, [requestId]);
 
   const loadRequest = async () => {
     try {
@@ -107,25 +177,11 @@ export default function RequestDetail() {
 
       setRequestData(request);
 
-      const isGroup = request.type === "group";
-      const targetResponderUid = responderUidParam || request.respondedBy;
-
-      if (isGroup && targetResponderUid) {
-        // 複数人対応：responses サブコレクションからこの回答者のデータを取得
-        const responseSnap = await getDoc(
-          doc(db, "requests", requestId, "responses", targetResponderUid)
-        );
-
-        if (responseSnap.exists()) {
-          setResponseData({ uid: targetResponderUid, ...responseSnap.data() });
-        }
-      }
-
-      if (targetResponderUid) {
-        const responderSnap = await getDoc(doc(db, "users", targetResponderUid));
+      if (request.respondedBy) {
+        const responderSnap = await getDoc(doc(db, "users", request.respondedBy));
 
         if (responderSnap.exists()) {
-          setResponderProfile(responderSnap.data());
+          setResponderData(responderSnap.data());
         }
       }
     } catch (error) {
@@ -159,15 +215,18 @@ export default function RequestDetail() {
 
       const request = requestSnap.data();
 
+      if (request.status === "matched" || request.thanksSent) {
+        Alert.alert("送信済み", "すでにありがとうを送りました");
+        router.replace("/(tabs)/notifications");
+        return;
+      }
+
       if (request.fromUid !== myUid) {
         Alert.alert("Error", "この相談を投稿した人だけがありがとうを送れます");
         return;
       }
 
-      const isGroup = request.type === "group";
-      const targetResponderUid = responderUidParam || request.respondedBy;
-
-      if (!targetResponderUid) {
+      if (!request.respondedBy) {
         Alert.alert("Error", "返事した人が見つかりません");
         return;
       }
@@ -179,55 +238,19 @@ export default function RequestDetail() {
       const myGrade = myData.grade || "";
       const myImage = getProfileImage(myData);
 
-      if (isGroup) {
-        // 複数人対応：この回答者のresponsesドキュメントだけを更新
-        const responseRef = doc(
-          db,
-          "requests",
-          requestId,
-          "responses",
-          targetResponderUid
-        );
+      await updateDoc(requestRef, {
+        thanksSent: true,
+        thanksMessage: THANKS_MESSAGE,
+        thanksFromUid: myUid,
+        thanksFromName: myName,
+        thanksFromGrade: myGrade,
+        thanksFromPhotoURL: myImage,
+        thanksSeenByResponder: false,
+        thanksAt: serverTimestamp(),
+        status: "matched",
+      });
 
-        const responseSnap = await getDoc(responseRef);
-
-        if (responseSnap.exists() && responseSnap.data().thanksSent) {
-          Alert.alert("送信済み", "すでにこの人にありがとうを送りました");
-          return;
-        }
-
-        await updateDoc(responseRef, {
-          thanksSent: true,
-          thanksMessage: THANKS_MESSAGE,
-          thanksFromUid: myUid,
-          thanksFromName: myName,
-          thanksFromGrade: myGrade,
-          thanksFromPhotoURL: myImage,
-          thanksSeenByResponder: false,
-          thanksAt: serverTimestamp(),
-        });
-      } else {
-        // 個人宛て(direct)は今まで通り
-        if (request.status === "matched" || request.thanksSent) {
-          Alert.alert("送信済み", "すでにありがとうを送りました");
-          router.replace("/(tabs)/requests");
-          return;
-        }
-
-        await updateDoc(requestRef, {
-          thanksSent: true,
-          thanksMessage: THANKS_MESSAGE,
-          thanksFromUid: myUid,
-          thanksFromName: myName,
-          thanksFromGrade: myGrade,
-          thanksFromPhotoURL: myImage,
-          thanksSeenByResponder: false,
-          thanksAt: serverTimestamp(),
-          status: "matched",
-        });
-      }
-
-      const responderSnap = await getDoc(doc(db, "users", targetResponderUid));
+      const responderSnap = await getDoc(doc(db, "users", request.respondedBy));
       const responderToken = responderSnap.data()?.expoPushToken;
 
       if (responderToken) {
@@ -248,7 +271,7 @@ export default function RequestDetail() {
       Alert.alert("送信しました", "相手にありがとうを送りました", [
         {
           text: "OK",
-          onPress: () => router.replace("/(tabs)/requests"),
+          onPress: () => router.replace("/(tabs)/notifications"),
         },
       ]);
     } catch (error) {
@@ -260,7 +283,7 @@ export default function RequestDetail() {
     return (
       <YStack
         flex={1}
-        backgroundColor="#F3F3F3"
+        backgroundColor="#F7F2EA"
         alignItems="center"
         justifyContent="center"
       >
@@ -269,26 +292,17 @@ export default function RequestDetail() {
     );
   }
 
-  const isGroup = requestData?.type === "group";
-
   const responderName =
-    (isGroup ? responseData?.name : requestData?.respondedByName) ||
-    responderProfile?.name ||
-    getParam(params.name, "名前なし");
+    requestData?.respondedByName || getParam(params.name, "名前なし");
 
-  const responderGrade =
-    (isGroup ? responseData?.grade : requestData?.respondedByGrade) ||
-    responderProfile?.grade ||
-    "";
+  const responderGrade = requestData?.respondedByGrade || "";
 
   const responderImage =
-    (isGroup ? responseData?.photoURL : requestData?.respondedByPhotoURL) ||
-    getProfileImage(responderProfile) ||
+    getProfileImage(responderData) ||
+    requestData?.respondedByPhotoURL ||
     getParam(params.imageUrl, "");
 
-  const timing =
-    (isGroup ? responseData?.timingLabel || responseData?.timing : requestData?.timing) ||
-    getParam(params.timing, "");
+  const timing = requestData?.timing || getParam(params.timing, "");
 
   const talkTags = Array.isArray(requestData?.talkTags)
     ? requestData.talkTags
@@ -296,34 +310,37 @@ export default function RequestDetail() {
         .split(",")
         .filter((tag) => tag);
 
+  const responderTags = Array.isArray(responderData?.tags)
+    ? responderData.tags
+    : [];
+
   const detail = requestData?.detail || getParam(params.detail, "");
 
-  const requestType = requestData?.type === "direct" ? "出会う" : "見つける";
-
-  const isMatched = isGroup
-    ? !!responseData?.thanksSent
-    : requestData?.status === "matched" || requestData?.thanksSent;
+  const isMatched = requestData?.status === "matched" || requestData?.thanksSent;
 
   return (
-    <YStack flex={1} backgroundColor="#F3F3F3">
+    <YStack flex={1} backgroundColor="#F7F2EA">
       <XStack
         height={110}
         backgroundColor="white"
         alignItems="center"
+        justifyContent="space-between"
         paddingHorizontal="$4"
         paddingTop={50}
       >
-        <Text
-          fontSize={36}
-          color="#BBB"
-          onPress={() => router.replace("/(tabs)/requests")}
-        >
-          ‹
-        </Text>
+        <XStack alignItems="center">
+          <Text
+            fontSize={36}
+            color="#BBB"
+            onPress={() => router.replace("/(tabs)/notifications")}
+          >
+            ‹
+          </Text>
 
-        <Text fontSize={18} fontWeight="700" marginLeft="$3">
-          お返事の詳細
-        </Text>
+          <Text fontSize={18} fontWeight="700" marginLeft="$3">
+            話しかける
+          </Text>
+        </XStack>
       </XStack>
 
       <ScrollView
@@ -333,100 +350,102 @@ export default function RequestDetail() {
         }}
       >
         <YStack padding="$4" gap="$4">
-          <XStack alignItems="center" gap="$3">
-            <AvatarCircle
-              imageUrl={responderImage}
-              name={responderName}
-              size={80}
-            />
+          {/* 回答者カード */}
+          <Card backgroundColor="white" borderRadius="$6" padding="$4" gap="$4">
+            <XStack alignItems="center" gap="$3">
+              <AvatarCircle
+                imageUrl={responderImage}
+                name={responderName}
+                size={64}
+              />
 
-            <YStack flex={1}>
-              <XStack alignItems="center" gap="$2" flexWrap="wrap">
-                <Text fontSize={22} fontWeight="700">
+              <YStack flex={1} gap="$1">
+                <Text fontSize={18} fontWeight="700">
                   {responderName}
-                  {responderGrade ? ` (${responderGrade})` : ""}
+                  {responderGrade ? `(${responderGrade})` : ""}
                 </Text>
 
-                <Text
-                  backgroundColor="#D7F7EF"
-                  color="#2AA985"
-                  paddingHorizontal="$2"
-                  paddingVertical="$1"
-                  borderRadius="$10"
-                  fontSize={12}
-                >
-                  {timing || "返事あり"}
-                </Text>
-              </XStack>
-
-              <Text fontSize={13} color="#999" marginTop="$1">
-                {requestType} からの相談
-              </Text>
-
-              <XStack gap="$2" flexWrap="wrap" marginTop="$2">
-                {talkTags.map((tag) => (
-                  <Text
-                    key={tag}
-                    backgroundColor="#E8C75A"
-                    color="white"
-                    paddingHorizontal="$2"
+                {timing ? (
+                  <YStack
+                    alignSelf="flex-start"
+                    backgroundColor="#D7F7EF"
+                    paddingHorizontal="$3"
                     paddingVertical="$1"
                     borderRadius="$10"
-                    fontSize={12}
                   >
-                    {tag}
-                  </Text>
-                ))}
-              </XStack>
-            </YStack>
-          </XStack>
+                    <Text color="#2AA985" fontSize={13} fontWeight="700">
+                      {timing}OK
+                    </Text>
+                  </YStack>
+                ) : null}
+              </YStack>
+            </XStack>
 
-          <Card backgroundColor="white" borderRadius="$6" padding="$4" gap="$4">
+            {/* 力になってくれること */}
             <YStack gap="$2">
-              <Text fontWeight="700">● 話したいこと</Text>
+              <XStack alignItems="center" gap="$2">
+                <YStack
+                  width={10}
+                  height={10}
+                  borderRadius={999}
+                  backgroundColor="#FFD966"
+                />
+                <Text fontWeight="700" fontSize={16}>
+                  力になってくれること
+                </Text>
+              </XStack>
 
               <XStack gap="$2" flexWrap="wrap">
-                {talkTags.length > 0 ? (
-                  talkTags.map((tag) => (
-                    <Text
-                      key={tag}
-                      backgroundColor="#E8C75A"
-                      color="white"
-                      paddingHorizontal="$2"
-                      paddingVertical="$1"
-                      borderRadius="$10"
-                      fontSize={12}
-                    >
-                      {tag}
-                    </Text>
+                {responderTags.length > 0 ? (
+                  responderTags.map((tag) => (
+                    <SmallTagPill key={tag} tag={tag} />
                   ))
                 ) : (
                   <Text fontSize={13} color="#999">
-                    未選択
+                    未設定
                   </Text>
                 )}
               </XStack>
             </YStack>
+          </Card>
 
-            <YStack gap="$2">
-              <Text fontWeight="700">● 話したいこと詳細</Text>
-
-              <Text fontSize={13} color="#333">
-                {detail || "詳細はありません。"}
+          {/* 話したいこと */}
+          <YStack gap="$2">
+            <XStack alignItems="center" gap="$2">
+              <YStack
+                width={10}
+                height={10}
+                borderRadius={999}
+                backgroundColor="#FFD966"
+              />
+              <Text fontWeight="700" fontSize={16}>
+                話したいこと
               </Text>
-            </YStack>
-          </Card>
+            </XStack>
 
-          <Card backgroundColor="white" borderRadius="$6" padding="$4" gap="$3">
-            <Text fontWeight="700">送るメッセージ</Text>
+            <XStack gap="$3" flexWrap="wrap">
+              {talkTags.length > 0 ? (
+                talkTags.map((tag) => <BigTagBox key={tag} tag={tag} />)
+              ) : (
+                <Text fontSize={13} color="#999">
+                  未選択
+                </Text>
+              )}
+            </XStack>
 
-            <Input
-              height={48}
-              backgroundColor="white"
-              value={THANKS_MESSAGE}
-              editable={false}
-            />
-          </Card>
+            {detail ? (
+              <Text fontSize={14} color="#333" marginTop="$2">
+                {detail}
+              </Text>
+            ) : null}
+          </YStack>
+
+          {/* 注意書き */}
+          <Text fontSize={14} color="#666" lineHeight={22}>
+            ※以下のボタンより相手と話すことが約束されます。
+            {"\n"}
+            「ありがとう」を送って早速話しかけてみましょう
+          </Text>
 
           {isMatched ? (
             <YStack
@@ -453,7 +472,7 @@ export default function RequestDetail() {
               marginBottom="$8"
               onPress={sendThanks}
             >
-              ありがとうを送る
+              ありがとう
             </Button>
           )}
         </YStack>
