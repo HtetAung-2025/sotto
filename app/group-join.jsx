@@ -87,11 +87,11 @@ export default function GroupJoin() {
     <YStack flex={1} backgroundColor="#FFF">
       <YStack flex={1} justifyContent="center" padding="$5">
         <YStack gap="$5" alignItems="center">
-          <Text fontSize={20} fontWeight="700" color="#000" marginBottom={35}>
+          <Text fontSize={20} fontWeight="700" color="#000" marginBottom={35}　fontFamily={"$heading"}>
             グループ参加
           </Text>
 
-          <Text fontSize={20} fontWeight="700" color="#000">
+          <Text fontSize={20} fontWeight="700" color="#000" fontFamily={"$body"}>
             グループコードを入力してください
           </Text>
 
@@ -102,6 +102,7 @@ export default function GroupJoin() {
             lineHeight={22}
             textAlign="center"
             marginBottom={20}
+            fontFamily={"$body"}
           >
             グループコードを持っていない方は
             {"\n"}
@@ -138,7 +139,7 @@ export default function GroupJoin() {
             {/* {joining ? "参加中..." : "次へ"} */}
           </Button>
 
-          <Text color="#B6B6B6" onPress={() => router.back()}>
+          <Text color="#B6B6B6" onPress={() => router.back()} fontFamily={"$body"}>
             １つ前に戻る
           </Text>
 

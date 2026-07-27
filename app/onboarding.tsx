@@ -13,7 +13,7 @@ type Step = {
 };
 
 const STEPS: Step[] = [
-  {
+  { 
     title: "SOTTOへようこそ",
     description:
       "話したいと思ったその気持ちの話す前と\n誰かのちょっとした力になれる\nサポートをしていきます。",
@@ -175,6 +175,7 @@ export default function Onboarding() {
           <YStack alignItems="center" gap="$2">
             <Text
               fontSize={isFirst ? 22 : 18}
+              fontFamily={"$heading"}
               fontWeight="800"
               color="#000"
               textAlign="center"
@@ -186,6 +187,7 @@ export default function Onboarding() {
             {step.description ? (
               <Text
                 fontSize={14}
+                fontFamily={"$body"}
                 color="#777"
                 textAlign="center"
                 lineHeight={22}
@@ -229,6 +231,7 @@ export default function Onboarding() {
                 color="#AAA"
                 fontWeight="600"
                 onPress={handleBack}
+                fontFamily={"$body"}
               >
                 1つ前に戻る
               </Text>

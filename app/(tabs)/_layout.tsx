@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { Tabs, useRouter } from "expo-router";
 import { PlusCircle, Bell } from "@tamagui/lucide-icons-2";
 import { Image } from "expo-image";
-
-import { Pressable, View, Text } from "react-native";
+import { Text } from "tamagui";
+import { Pressable, View} from "react-native";
 
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, onSnapshot, Unsubscribe, doc } from "firebase/firestore";
@@ -113,76 +113,89 @@ export default function TabLayout() {
   return (
     <Tabs
       initialRouteName="reservations"
-      screenOptions={{
-        headerShown: true,
-        headerTitleAlign: "center",
-        headerStyle: {height: 110},
-        headerRight: () => (
-          <Pressable
-            onPress={() => router.push("/profile")}
-            style={{
-              marginRight: 16,
-              marginBottom: -4,
-            }}
-          >
-            {photoURL ? (
-              <Image
-                source={{ uri: photoURL }}
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: "#DDD",
-                }}
-              />
-            ) : (
-              <View
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 20,
-                  backgroundColor: "#FFD966",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  borderWidth: 1,
-                  borderColor: "#DDD",
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 18,
-                    fontWeight: "700",
-                    color: "#333",
-                  }}
-                >
-                  ?
-                </Text>
-              </View>
-            )}
-          </Pressable>
-        ),
+screenOptions={{
+  headerShown: true,
+  headerTitleAlign: "center",
 
-        tabBarActiveTintColor: "#FFF",
-        tabBarInactiveTintColor: "#999",
+  headerStyle: {
+    height: 110,
+  },
 
-        tabBarStyle: {
-          height: 80,
-          marginBottom: -12,
-          paddingBottom: 12,
-          backgroundColor: "#fff",
-          borderTopWidth: 0,
-        },
+  headerTitleStyle: {
+    fontFamily: "ZenMaruGothic_700Bold",
+    fontSize: 22,
+  },
 
-        tabBarItemStyle: {
-          height: "100%",
-          overflow: "hidden",
-        },
-
-        tabBarIconStyle: {
-          marginTop: 5,
-        },
+  headerRight: () => (
+    <Pressable
+      onPress={() => router.push("/profile")}
+      style={{
+        marginRight: 16,
+        marginBottom: -4,
       }}
+    >
+      {photoURL ? (
+        <Image
+          source={{ uri: photoURL }}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            borderWidth: 1,
+            borderColor: "#DDD",
+          }}
+        />
+      ) : (
+        <View
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: "#FFD966",
+            justifyContent: "center",
+            alignItems: "center",
+            borderWidth: 1,
+            borderColor: "#DDD",
+          }}
+        >
+          <Text
+            fontFamily="$body"
+            fontSize={18}
+            fontWeight="700"
+            color="#333"
+          >
+            ?
+          </Text>
+        </View>
+      )}
+    </Pressable>
+  ),
+
+  tabBarActiveTintColor: "#FFF",
+  tabBarInactiveTintColor: "#999",
+
+  tabBarLabelStyle: {
+    fontFamily: "ZenMaruGothic_700Bold",
+    fontSize: 12,
+  },
+
+  tabBarStyle: {
+    height: 80,
+    marginBottom: -12,
+    paddingBottom: 12,
+    backgroundColor: "#fff",
+    borderTopWidth: 0,
+  },
+
+  tabBarItemStyle: {
+    height: "100%",
+    overflow: "hidden",
+  },
+
+  tabBarIconStyle: {
+    marginTop: 5,
+  },
+}}
     >
       <Tabs.Screen
         name="reservations"
@@ -241,7 +254,13 @@ export default function TabLayout() {
               onPress={() => router.back()}
               style={{ marginLeft: 16 }}
             >
-              <Text style={{ fontSize: 32, color: "#BBB" }}>‹</Text>
+             <Text
+  fontFamily="$body"
+  fontSize={32}
+  color="#BBB"
+>
+  ‹
+</Text>
             </Pressable>
           ),
         }}

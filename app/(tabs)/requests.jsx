@@ -163,7 +163,7 @@ export default function Requests() {
     if (!myActivePost) return;
 
     Alert.alert("投稿をキャンセルしますか？", "この投稿を取り消します。", [
-      { text: "戻る", style: "cancel" },
+      { text: "戻る", style: "cancel"},
       {
         text: "キャンセルする",
         style: "destructive",
@@ -229,7 +229,7 @@ export default function Requests() {
 
           {myActivePost ? (
             <>
-              <Text color="#999" fontSize={14}>
+              <Text color="#999" fontSize={14} fontFamily={"$body"}>
                 最新の投稿に回答してくれた人です
               </Text>
 

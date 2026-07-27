@@ -82,6 +82,7 @@ function DateBadge({ label, value }) {
       paddingHorizontal="$2"
       paddingVertical="$1"
       borderRadius="$10"
+      fontFamily={"$body"}
     >
       {label ? `${label} ${text}` : text}
     </Text>
@@ -112,7 +113,7 @@ function AvatarCircle({ imageUrl, name, size = 58, bg = "#FFD966" }) {
           resizeMode="cover"
         />
       ) : (
-        <Text fontSize={24} fontWeight="700" color="#111">
+        <Text fontSize={24} fontWeight="700" color="#111" fontFamily={"$body"}>
           {name?.charAt(0) || "?"}
         </Text>
       )}
@@ -406,21 +407,6 @@ export default function NotificationsScreen() {
     }
   };
 
-  const openMyPostResponse = (entry) => {
-    if (entry.thanksSent) {
-      Alert.alert("送信済み", "この人にはすでにありがとうを送信しました");
-      return;
-    }
-
-    router.push({
-      pathname: "/request-detail",
-      params: {
-        id: entry.requestId,
-        responderUid: entry.responderUid,
-      },
-    });
-  };
-
   const openDirectRequestDetail = (req) => {
     if (req.status === "matched") {
       Alert.alert("送信済み", "この相談はすでにありがとうを送信しました");
@@ -629,7 +615,7 @@ export default function NotificationsScreen() {
                     padding="$3"
                     alignItems="center"
                   >
-                    <Text fontSize={18} fontWeight="700" color="#2AA985">
+                    <Text fontSize={18} fontWeight="700" color="#2AA985" fontFamily={"$body"}>
                       {req.status === "matched"
                         ? "ありがとう送信済み"
                         : "お返事が届きました！"}
@@ -661,23 +647,23 @@ export default function NotificationsScreen() {
                       />
 
                       <YStack flex={1}>
-                        <Text fontSize={18} fontWeight="700" color="#111">
+                        <Text fontSize={18} fontWeight="700" color="#111" fontFamily={"$body"}>
                           {req.respondedByName || "名前なし"}
                           {req.respondedByGrade
                             ? ` (${req.respondedByGrade})`
                             : ""}
                         </Text>
 
-                        <Text fontSize={17} fontWeight="700" color="#2AA985">
+                        <Text fontSize={17} fontWeight="700" color="#2AA985" fontFamily={"$body"}>
                           「{req.timing}」で話せます
                         </Text>
 
                         {req.status === "matched" ? (
-                          <Text fontSize={13} color="#999">
+                          <Text fontSize={13} color="#999" fontFamily={"$body"}>
                             相手にありがとうを送りました
                           </Text>
                         ) : (
-                          <Text fontSize={13} color="#999">
+                          <Text fontSize={13} color="#999" fontFamily={"$body"}>
                             押してありがとうを送る
                           </Text>
                         )}
@@ -694,81 +680,78 @@ export default function NotificationsScreen() {
       {/* 自分の投稿に来た回答（group、複数人ぶん個別カード） */}
       {myPostResponses.length > 0 && (
         <YStack marginBottom="$5">
-          <Text fontSize={14} fontWeight="700" color="#999" marginBottom="$2">
+          <Text fontSize={14} fontWeight="700" color="#999" marginBottom="$2" fontFamily={"$body"}>
             あなたの投稿への回答
           </Text>
 
           {myPostResponses.map((entry) => (
-            <Pressable
+            <Card
               key={`${entry.requestId}-${entry.responderUid}`}
-              onPress={() => openMyPostResponse(entry)}
+              backgroundColor="white"
+              borderRadius="$6"
+              marginBottom="$3"
+              overflow="hidden"
             >
-              <Card
-                backgroundColor="white"
-                borderRadius="$6"
-                marginBottom="$3"
-                overflow="hidden"
+              <YStack
+                backgroundColor={entry.thanksSent ? "#E6FBF5" : "#FFFBE6"}
+                padding="$3"
+                alignItems="center"
               >
-                <YStack
-                  backgroundColor={entry.thanksSent ? "#E6FBF5" : "#FFFBE6"}
-                  padding="$3"
-                  alignItems="center"
+                <Text
+                  fontSize={18}
+                  fontWeight="700"
+                  color={entry.thanksSent ? "#2AA985" : "#B8860B"}
+                  fontFamily={"$body"}
                 >
-                  <Text
-                    fontSize={18}
-                    fontWeight="700"
-                    color={entry.thanksSent ? "#2AA985" : "#B8860B"}
-                  >
-                    {entry.thanksSent
-                      ? "ありがとう送信済み"
-                      : "お返事が届きました！"}
-                  </Text>
-                </YStack>
+                  {entry.thanksSent
+                    ? "ありがとう送信済み"
+                    : "お返事が届きました！"}
+                </Text>
+              </YStack>
 
-                <YStack padding="$4" gap="$3">
-                  <XStack justifyContent="space-between" alignItems="center">
-                    <Text fontSize={12} color="#999">
-                      投稿
+              <YStack padding="$4" gap="$3">
+                <XStack justifyContent="space-between" alignItems="center">
+                  <Text fontSize={12} color="#999" fontFamily={"$body"}>
+                    投稿
+                  </Text>
+
+                  <DateBadge
+                    label={entry.thanksSent ? "完了" : "返信"}
+                    value={entry.thanksSent ? entry.thanksAt : entry.respondedAt}
+                  />
+                </XStack>
+
+                <XStack gap="$3" alignItems="center">
+                  <AvatarCircle
+                    imageUrl={entry.photoURL}
+                    name={entry.name}
+                    size={58}
+                    bg="#FFD966"
+                  />
+
+                  <YStack flex={1}>
+                    <Text fontSize={18} fontWeight="700" color="#111" fontFamily={"$body"}>
+                      {entry.name || "名前なし"}
+                      {entry.grade ? ` (${entry.grade})` : ""}
                     </Text>
 
-                    <DateBadge
-                      label={entry.thanksSent ? "完了" : "返信"}
-                      value={entry.thanksSent ? entry.thanksAt : entry.respondedAt}
-                    />
-                  </XStack>
+                    <Text fontSize={17} fontWeight="700" color="#2AA985" fontFamily={"$body"}>
+                      「{entry.timingLabel || entry.timing}」で話せます
+                    </Text>
 
-                  <XStack gap="$3" alignItems="center">
-                    <AvatarCircle
-                      imageUrl={entry.photoURL}
-                      name={entry.name}
-                      size={58}
-                      bg="#FFD966"
-                    />
-
-                    <YStack flex={1}>
-                      <Text fontSize={18} fontWeight="700" color="#111">
-                        {entry.name || "名前なし"}
-                        {entry.grade ? ` (${entry.grade})` : ""}
+                    {entry.thanksSent ? (
+                      <Text fontSize={13} color="#999" fontFamily={"$body"}>
+                        相手にありがとうを送りました
                       </Text>
-
-                      <Text fontSize={17} fontWeight="700" color="#2AA985">
-                        「{entry.timingLabel || entry.timing}」で話せます
+                    ) : (
+                      <Text fontSize={13} color="#999" fontFamily={"$body"}>
+                        押してありがとうを送る
                       </Text>
-
-                      {entry.thanksSent ? (
-                        <Text fontSize={13} color="#999">
-                          相手にありがとうを送りました
-                        </Text>
-                      ) : (
-                        <Text fontSize={13} color="#999">
-                          押してありがとうを送る
-                        </Text>
-                      )}
-                    </YStack>
-                  </XStack>
-                </YStack>
-              </Card>
-            </Pressable>
+                    )}
+                  </YStack>
+                </XStack>
+              </YStack>
+            </Card>
           ))}
         </YStack>
       )}
@@ -805,6 +788,7 @@ export default function NotificationsScreen() {
                     fontSize={18}
                     fontWeight="700"
                     color={thanksSent ? "#2AA985" : "#B8860B"}
+                    fontFamily={"$body"}
                   >
                     {thanksSent ? "ありがとうが届きました！" : "お返事済み"}
                   </Text>
@@ -812,7 +796,7 @@ export default function NotificationsScreen() {
 
                 <YStack padding="$4" gap="$3">
                   <XStack justifyContent="space-between" alignItems="center">
-                    <Text fontSize={12} color="#999">
+                    <Text fontSize={12} color="#999" fontFamily={"$body"}>
                       {getRequestTypeLabel(req)}
                     </Text>
 
@@ -835,19 +819,19 @@ export default function NotificationsScreen() {
                     />
 
                     <YStack flex={1}>
-                      <Text fontSize={16} fontWeight="700" color="#111">
+                      <Text fontSize={16} fontWeight="700" color="#111" fontFamily={"$body"}>
                         {req.fromName || "匿名"}
                         {req.fromGrade ? ` (${req.fromGrade})` : ""}
                       </Text>
 
-                      <Text fontSize={13} color="#999">
+                      <Text fontSize={13} color="#999" fontFamily={"$body"}>
                         「{timingText}」で返信済みです
                       </Text>
                     </YStack>
                   </XStack>
 
                   <XStack gap="$2" flexWrap="wrap" alignItems="center">
-                    <Text fontSize={13} color="#777">
+                    <Text fontSize={13} color="#777" fontFamily={"$body"}>
                       話したいこと:
                     </Text>
 
@@ -859,6 +843,7 @@ export default function NotificationsScreen() {
                         paddingHorizontal="$2"
                         paddingVertical="$1"
                         borderRadius="$10"
+                        fontFamily={"$body"}
                       >
                         {tag}
                       </Text>
@@ -875,7 +860,7 @@ export default function NotificationsScreen() {
       {/* 返事待ち */}
       {waitingRequests.length > 0 && (
         <YStack>
-          <Text fontSize={14} fontWeight="700" color="#999" marginBottom="$2">
+          <Text fontSize={14} fontWeight="700" color="#999" marginBottom="$2" fontFamily={"$body"}>
             相談が届いています
           </Text>
 
@@ -892,14 +877,14 @@ export default function NotificationsScreen() {
                 overflow="hidden"
               >
                 <YStack backgroundColor="#FFFBE6" padding="$3" alignItems="center">
-                  <Text fontSize={18} fontWeight="700" color="#B8860B">
+                  <Text fontSize={18} fontWeight="700" color="#B8860B" fontFamily={"$body"}>
                     話しかけてくれました！
                   </Text>
                 </YStack>
 
                 <YStack padding="$4" gap="$3">
                   <XStack justifyContent="space-between" alignItems="center">
-                    <Text fontSize={12} color="#999">
+                    <Text fontSize={12} color="#999" fontFamily={"$body"}>
                       {getWaitingTypeLabel(req)}
                     </Text>
 
@@ -915,19 +900,19 @@ export default function NotificationsScreen() {
                     />
 
                     <YStack flex={1}>
-                      <Text fontSize={16} fontWeight="700" color="#111">
+                      <Text fontSize={16} fontWeight="700" color="#111" fontFamily={"$body"}>
                         {req.fromName || "匿名"}
                         {req.fromGrade ? ` (${req.fromGrade})` : ""}
                       </Text>
 
-                      <Text fontSize={13} color="#999">
+                      <Text fontSize={13} color="#999" fontFamily={"$body"}>
                         {getRequestTypeLabel(req)} からの相談
                       </Text>
                     </YStack>
                   </XStack>
 
                   <XStack gap="$2" flexWrap="wrap" alignItems="center">
-                    <Text fontSize={13} color="#777">
+                    <Text fontSize={13} color="#777" fontFamily={"$body"}>
                       話したいこと:
                     </Text>
 
@@ -939,6 +924,7 @@ export default function NotificationsScreen() {
                         paddingHorizontal="$2"
                         paddingVertical="$1"
                         borderRadius="$10"
+                        fontFamily={"$body"}
                       >
                         {tag}
                       </Text>
@@ -946,7 +932,7 @@ export default function NotificationsScreen() {
                   </XStack>
 
                   <XStack gap="$2" alignItems="center">
-                    <Text fontSize={13} color="#777">
+                    <Text fontSize={13} color="#777" fontFamily={"$body"}>
                       状態:
                     </Text>
 
@@ -956,6 +942,7 @@ export default function NotificationsScreen() {
                       paddingHorizontal="$2"
                       paddingVertical="$1"
                       borderRadius="$10"
+                      fontFamily={"$body"}
                     >
                       {req.feelTag}
                     </Text>
@@ -963,18 +950,18 @@ export default function NotificationsScreen() {
 
                   {req.detail ? (
                     <YStack>
-                      <Text fontSize={13} color="#777">
+                      <Text fontSize={13} color="#777" fontFamily={"$body"}>
                         詳細:
                       </Text>
 
-                      <Text fontSize={14} color="#333" marginTop="$1">
+                      <Text fontSize={14} color="#333" marginTop="$1" fontFamily={"$body"}>
                         {req.detail}
                       </Text>
                     </YStack>
                   ) : null}
 
                   <YStack gap="$2" marginTop="$2">
-                    <Text fontSize={13} color="#777">
+                    <Text fontSize={13} color="#777" fontFamily={"$body"}>
                       返事を選択してください
                     </Text>
 
@@ -1025,7 +1012,7 @@ export default function NotificationsScreen() {
 
       {hasNothing && (
         <YStack alignItems="center" paddingTop="$10">
-          <Text color="#999">まだ通知はありません</Text>
+          <Text color="#999" fontFamily={"$body"}>まだ通知はありません</Text>
         </YStack>
       )}
     </ScrollView>

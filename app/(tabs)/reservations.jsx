@@ -77,21 +77,28 @@ const DEFAULT_ICON_NAME = {
   "雑談": "Music",
 };
 
-function TagPill({ tag }) {
+const TAG_PILL_SIZES = {
+  sm: { paddingH: "$3", paddingV: "$1", iconSize: 14, fontSize: 13, gap: "$1" },
+  md: { paddingH: "$4", paddingV: "$2", iconSize: 18, fontSize: 15, gap: "$2" },
+  lg: { paddingH: "$5", paddingV: "$3", iconSize: 22, fontSize: 17, gap: "$2" },
+};
+
+function TagPill({ tag, size = "md" }) {
   const iconName = DEFAULT_ICON_NAME[tag];
   const Icon = ICON_BY_NAME[iconName];
+  const s = TAG_PILL_SIZES[size] || TAG_PILL_SIZES.md;
 
   return (
     <XStack
       backgroundColor="#E8C75A"
-      paddingHorizontal="$3"
-      paddingVertical="$1"
+      paddingHorizontal={s.paddingH}
+      paddingVertical={s.paddingV}
       borderRadius="$10"
       alignItems="center"
-      gap="$1"
+      gap={s.gap}
     >
-      {Icon ? <Icon size={14} color="white" /> : null}
-      <Text color="white" fontSize={13} fontWeight="700">
+      {Icon ? <Icon size={s.iconSize} color="white" /> : null}
+      <Text color="white" fontSize={s.fontSize} fontWeight="700" fontFamily={"$body"}>
         {tag}
       </Text>
     </XStack>
@@ -123,7 +130,7 @@ function ResponderAvatar({ name, photoURL, size = 80 }) {
       alignItems="center"
       justifyContent="center"
     >
-      <Text fontWeight="700" color="#111" fontSize={size * 0.4}>
+      <Text fontWeight="700" color="#111" fontSize={size * 0.4} fontFamily={"$body"}>
         {name?.charAt(0) || "?"}
       </Text>
     </YStack>
@@ -438,7 +445,7 @@ export default function Reservations() {
         alignItems="center"
         justifyContent="center"
       >
-        <Text color="#999">読み込み中...</Text>
+        <Text color="#999" fontFamily={"$body"}>読み込み中...</Text>
       </YStack>
     );
   }
@@ -458,7 +465,7 @@ export default function Reservations() {
           <YStack gap="$4">
             {/* フィルター */}
 
-            <Text color="#999" fontSize={14}>
+            <Text color="#999" fontSize={14} fontFamily={"$body"}>
               最新の投稿に回答してくれた人です
             </Text>
 
@@ -482,7 +489,7 @@ export default function Reservations() {
                   borderRadius={999}
                   backgroundColor="#FFD966"
                 />
-                <Text fontWeight="700" fontSize={16}>
+                <Text fontWeight="700" fontSize={16} fontFamily={"$body"}>
                   話したいこと
                 </Text>
 
@@ -493,7 +500,7 @@ export default function Reservations() {
               </XStack>
 
               <Button
-                width="90%"
+                width="40%"
                 height={54}
                 borderRadius="$10"
                 backgroundColor="#E5E5E5"
@@ -504,8 +511,12 @@ export default function Reservations() {
                 disabled={cancelling}
                 opacity={cancelling ? 0.6 : 1}
               >
-                {cancelling ? "処理中..." : "キャンセル"}
+                {cancelling ? "処理中..." : "完了"}
               </Button>
+              <Text color="#999" fontSize={12} fontFamily={"$body"}>
+                ※もし別のリクエストをしたい/解決した場合は
+完了ボタンを押してまたリクエストをしてみてください
+              </Text>
             </Card>
             <XStack gap="$2" flexWrap="wrap" justifyContent="center">
               {FILTERS.map((f) => (
@@ -551,7 +562,7 @@ export default function Reservations() {
                       size={100}
                     />
 
-                    <Text marginTop="$3" fontSize={20} fontWeight="800">
+                    <Text marginTop="$3" fontSize={20} fontWeight="800" fontFamily={"$body"}>
                       {r.name}
                       {r.grade ? ` (${r.grade})` : ""}
                     </Text>
@@ -564,6 +575,7 @@ export default function Reservations() {
                       paddingVertical="$2"
                       borderRadius={999}
                       fontWeight="700"
+                      fontFamily={"$body"}
                     >
                       {r.thanksSent ? "ありがとう送信済み" : r.timing}
                     </Text>
@@ -572,7 +584,7 @@ export default function Reservations() {
               </XStack>
             ) : (
               <YStack alignItems="center" paddingVertical="$6">
-                <Text color="#AAA" fontSize={14}>
+                <Text color="#AAA" fontSize={14} fontFamily={"$body"}>
                   まだこの投稿に回答してくれた人はいません
                 </Text>
               </YStack>
@@ -596,18 +608,18 @@ export default function Reservations() {
       >
         <YStack gap="$4">
           <YStack gap="$2" paddingHorizontal="$2">
-            <Text fontSize={28} fontWeight="800" color="#222">
+            <Text fontSize={28} fontWeight="800" color="#222" fontFamily={"$heading"}>
               使い手順
             </Text>
 
-            <Text fontSize={14} color="#777" lineHeight={21}>
+            <Text fontSize={14} color="#777" lineHeight={21} fontFamily={"$body"}>
               相談したい内容を全体に投稿します。
               {"\n"}
               回答してくれた人はこの画面の下に表示されます。
             </Text>
           </YStack>
 
-          <Text textAlign="center" color="#999" fontSize={12}>
+          <Text textAlign="center" color="#999" fontSize={12} fontFamily={"$body"}>
             🔒 あなたの名前は相手側には表示されません。
             {"\n"}
             気軽に投稿してみてください。
@@ -615,7 +627,7 @@ export default function Reservations() {
 
           <Card backgroundColor="white" borderRadius="$6" padding="$4" gap="$4">
             <YStack gap="$2">
-              <Text fontWeight="700">
+              <Text fontWeight="700" fontFamily={"$body"}>
                 🟡 話したいこと
                 <Text fontSize={11}> ※3つまで選択できます。</Text>
               </Text>
@@ -645,7 +657,7 @@ export default function Reservations() {
                         {Icon ? (
                           <Icon size={28} color={talkTags.includes(tag) ? "#111" : "#333"} />
                         ) : null}
-                        <Text fontSize={13} lineHeight={14} textAlign="center">
+                        <Text fontSize={13} lineHeight={14} textAlign="center" fontFamily={"$body"}>
                           {tag}
                         </Text>
                       </YStack>
@@ -672,7 +684,7 @@ export default function Reservations() {
             {posting ? "投稿中..." : "この内容で投稿する"}
           </Button>
 
-          <Text textAlign="center" color="#AAA" fontSize={12} lineHeight={18}>
+          <Text textAlign="center" color="#AAA" fontSize={12} lineHeight={18} fontFamily={"$body"}>
             投稿後、全員に通知が届きます。
             {"\n"}
             回答してくれた人はこの下に表示されます。

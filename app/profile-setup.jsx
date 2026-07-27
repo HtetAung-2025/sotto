@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Alert, Image } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { YStack, XStack, H1, Text, Button, Input } from "tamagui";
-import { File, BookOpen, Edit3, Lightbulb, GraduationCap, Briefcase, Key, Music } from "@tamagui/lucide-icons-2";
+import { File, BookOpen, Edit3, Lightbulb, GraduationCap, Briefcase, Key, Music,Camera } from "@tamagui/lucide-icons-2";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import * as ImagePicker from "expo-image-picker";
@@ -350,8 +350,8 @@ export default function ProfileSetup() {
 
         {step === 1 && (
           <YStack width="80%" alignItems="center" marginBottom={5}>
-            <Text fontSize={20} marginBottom={15}>学科を選んでください</Text>
-            <Text marginBottom="40" fontSize={14}>
+            <Text fontSize={20} marginBottom={15} fontFamily={"$body"}>学科を選んでください</Text>
+            <Text marginBottom="40" fontSize={14}fontFamily={"$body"}>
               &#8251;後から変更可能です。
             </Text>
 
@@ -376,36 +376,36 @@ export default function ProfileSetup() {
 
         {step === 2 && (
           <YStack gap="$4" alignItems="center">
-            <Text fontSize={20}>アイコンを選択してください</Text>
-            <Text marginBottom="40" fontSize={14}>
+            <Text fontSize={20} fontFamily={"$body"}>アイコンを選択してください</Text>
+            <Text marginBottom="40" fontSize={14} fontFamily={"$body"}>
               &#8251;後から変更可能です。
             </Text>
 
             <Button
-              width={120}
-              height={120}
-              borderRadius={999}
-              backgroundColor="#EEE"
-              padding={0}
-              overflow="hidden"
-              onPress={pickImage}
-            >
-              {previewImage ? (
-                <Image
-                  source={{ uri: previewImage }}
-                  style={{
-                    width: 120,
-                    height: 120,
-                    borderRadius: 60,
-                  }}
-                  resizeMode="cover"
-                />
-              ) : (
-                <Text fontSize={30}>📷</Text>
-              )}
-            </Button>
+  width={120}
+  height={120}
+  borderRadius={999}
+  backgroundColor="#EEE"
+  padding={0}
+  overflow="hidden"
+  onPress={pickImage}
+>
+  {previewImage ? (
+    <Image
+      source={{ uri: previewImage }}
+      style={{
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+      }}
+      resizeMode="cover"
+    />
+  ) : (
+    <Camera size={40} color="#999" />
+  )}
+</Button>
 
-            <Text color="#777" marginBottom={127}>
+            <Text color="#777" marginBottom={127} fontFamily={"$body"}>
               画像を選択
             </Text>
           </YStack>
@@ -413,14 +413,14 @@ export default function ProfileSetup() {
 
         {step === 3 && (
           <YStack gap="$4">
-            <Text textAlign="center" marginTop={30} fontSize={20}>
+            <Text textAlign="center" marginTop={30} fontSize={20} fontFamily={"$body"}>
               以下の内容を入力してください
             </Text>
-            <Text textAlign="center" marginBottom="40" fontSize={14}>
+            <Text textAlign="center" marginBottom="40" fontSize={14} fontFamily={"$body"}>
               &#8251;後から変更可能です。
             </Text>
 
-            <Text marginBottom={-15}>
+            <Text marginBottom={-15} fontFamily={"$body"}>
               メールアドレス
             </Text>
 
@@ -434,7 +434,7 @@ export default function ProfileSetup() {
               marginBottom={25}
             />
 
-            <Text marginBottom={-15}>
+            <Text marginBottom={-15} fontFamily={"$body"}>
               表示名　※誰でもわかる名前（本名）にしましょう
             </Text>
 
@@ -453,15 +453,15 @@ export default function ProfileSetup() {
 
         {step === 4 && (
           <YStack gap="$4" width="60%">
-            <Text textAlign="center">
+            <Text textAlign="center" fontFamily={"$body"}>
               誰かのために力になれそうな分野、
               {"\n"}
               話せる内容を選んでください
             </Text>
-            <Text textAlign="center" marginBottom="10" fontSize={14}>
+            <Text textAlign="center" marginBottom="10" fontSize={14} fontFamily={"$body"}>
               &#8251;後から変更可能です。
             </Text>
-            <Text textAlign="center" marginBottom="10" color="#B6B6B6">
+            <Text textAlign="center" marginBottom="10" color="#B6B6B6" fontFamily={"$body"}>
               ※３つまで選択することができます。
             </Text>
 
@@ -498,7 +498,7 @@ export default function ProfileSetup() {
                         {Icon ? (
                           <Icon size={28} color={selectedTags.includes(tag) ? "#111" : "#333"} />
                         ) : null}
-                        <Text fontSize={12} lineHeight={14} textAlign="center">
+                        <Text fontSize={12} lineHeight={14} textAlign="center" fontFamily={"$body"}>
                           {tag}
                         </Text>
                       </YStack>
@@ -552,6 +552,7 @@ export default function ProfileSetup() {
             textAlign="center"
             color="#999"
             onPress={() => setStep(step - 1)}
+            fontFamily={"$body"}
           >
             1つ前へ戻る
           </Text>

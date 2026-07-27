@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Alert, ScrollView, Image } from "react-native";
+import { Alert, ScrollView, Image, Modal } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { YStack, XStack, Text, Button, Card } from "tamagui";
 import { File, Edit3, BookOpen, GraduationCap, Key, Briefcase, Lightbulb, Music } from "@tamagui/lucide-icons-2";
@@ -84,7 +84,7 @@ function AvatarCircle({ imageUrl, name, size = 80 }) {
           resizeMode="cover"
         />
       ) : (
-        <Text fontSize={34} fontWeight="700" color="#111">
+        <Text fontSize={34} fontWeight="700" color="#111" fontFamily={"$body"}>
           {name?.charAt(0) || "?"}
         </Text>
       )}
@@ -109,7 +109,7 @@ function SmallTagPill({ tag }) {
       gap="$2"
     >
       {Icon ? <Icon size={16} color="#333" /> : null}
-      <Text color="#333" fontSize={13} fontWeight="600">
+      <Text color="#333" fontSize={13} fontWeight="600" fontFamily={"$body"}>
         {tag}
       </Text>
     </XStack>
@@ -135,10 +135,86 @@ function BigTagBox({ tag }) {
       padding={10}
     >
       {Icon ? <Icon size={28} color="#333" /> : null}
-      <Text fontSize={13} lineHeight={14} textAlign="center" color="#333">
+      <Text fontSize={13} lineHeight={14} textAlign="center" color="#333" fontFamily={"$body"}>
         {tag}
       </Text>
     </YStack>
+  );
+}
+
+// ありがとう送信完了時のポップアップ（握手アイコン + メッセージ）
+function ThanksSuccessModal({ visible, responderName, onClose }) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
+      <YStack
+        flex={1}
+        backgroundColor="rgba(0,0,0,0.45)"
+        alignItems="center"
+        justifyContent="center"
+        padding="$5"
+      >
+        <YStack
+          width="100%"
+          maxWidth={350}
+          backgroundColor="#F7F2EA"
+          borderRadius="$8"
+          padding="$6"
+          alignItems="center"
+          gap="$4"
+        >
+          <Text
+            fontSize={20}
+            fontWeight="700"
+            color="#333"
+            textAlign="center"
+            fontFamily={"$body"}
+          >
+            約束が完了しました！
+          </Text>
+
+          <Text
+            fontSize={14}
+            color="#666"
+            textAlign="center"
+            lineHeight={22}
+            fontFamily={"$body"}
+          >
+            早速話す時間や場所を決めにいきましょう！
+            {"\n"}
+            {responderName ? `${responderName}さんが` : "相手が"}あなたのことを待っています
+          </Text>
+        <Text fontSize={12} color="#666" textAlign="center" lineHeight={22} fontFamily={"$body"}>
+            ※別のリクエストをしたい/解決した場合は
+完了ボタンを押してください
+          </Text>
+          <YStack
+            width={140}
+            height={140}
+            alignItems="center"
+            justifyContent="center"
+          >
+            <Image
+              source={require("../assets/images/hand.png")}
+              style={{ width: 140, height: 140 }}
+              resizeMode="contain"
+            />
+          </YStack>
+
+          <Button
+            width="100%"
+            height={52}
+            borderRadius="$10"
+            backgroundColor="#FFD966"
+            color="black"
+            fontSize={17}
+            fontWeight="700"
+            onPress={onClose}
+          >
+            OK
+          </Button>
+        </YStack>
+      </YStack>
+    </Modal>
   );
 }
 
@@ -146,13 +222,19 @@ export default function RequestDetail() {
   const params = useLocalSearchParams();
 
   const requestId = getParam(params.id);
+  const responderUidParam = getParam(params.responderUid); // グループ投稿の場合、誰への詳細/お礼かを特定する
+
   const [requestData, setRequestData] = useState(null);
-  const [responderData, setResponderData] = useState(null);
+  const [responseData, setResponseData] = useState(null); // グループ投稿：responses サブコレクションの個別回答
+  const [responderData, setResponderData] = useState(null); // 回答者本人のユーザープロフィール
   const [loading, setLoading] = useState(true);
+  const [showThanksModal, setShowThanksModal] = useState(false);
+
+  const isGroupResponse = !!responderUidParam;
 
   useEffect(() => {
     loadRequest();
-  }, [requestId]);
+  }, [requestId, responderUidParam]);
 
   const loadRequest = async () => {
     try {
@@ -177,7 +259,23 @@ export default function RequestDetail() {
 
       setRequestData(request);
 
-      if (request.respondedBy) {
+      if (isGroupResponse) {
+        // グループ投稿：この回答者個人の response ドキュメントを見る
+        const responseSnap = await getDoc(
+          doc(db, "requests", requestId, "responses", responderUidParam)
+        );
+
+        if (responseSnap.exists()) {
+          setResponseData(responseSnap.data());
+        }
+
+        const responderSnap = await getDoc(doc(db, "users", responderUidParam));
+
+        if (responderSnap.exists()) {
+          setResponderData(responderSnap.data());
+        }
+      } else if (request.respondedBy) {
+        // direct投稿：これまで通り request.respondedBy を見る
         const responderSnap = await getDoc(doc(db, "users", request.respondedBy));
 
         if (responderSnap.exists()) {
@@ -215,19 +313,8 @@ export default function RequestDetail() {
 
       const request = requestSnap.data();
 
-      if (request.status === "matched" || request.thanksSent) {
-        Alert.alert("送信済み", "すでにありがとうを送りました");
-        router.replace("/(tabs)/notifications");
-        return;
-      }
-
       if (request.fromUid !== myUid) {
         Alert.alert("Error", "この相談を投稿した人だけがありがとうを送れます");
-        return;
-      }
-
-      if (!request.respondedBy) {
-        Alert.alert("Error", "返事した人が見つかりません");
         return;
       }
 
@@ -238,45 +325,112 @@ export default function RequestDetail() {
       const myGrade = myData.grade || "";
       const myImage = getProfileImage(myData);
 
-      await updateDoc(requestRef, {
-        thanksSent: true,
-        thanksMessage: THANKS_MESSAGE,
-        thanksFromUid: myUid,
-        thanksFromName: myName,
-        thanksFromGrade: myGrade,
-        thanksFromPhotoURL: myImage,
-        thanksSeenByResponder: false,
-        thanksAt: serverTimestamp(),
-        status: "matched",
-      });
+      if (isGroupResponse) {
+        // ===== グループ投稿：この回答者だけにありがとうを送る =====
+        const responseRef = doc(
+          db,
+          "requests",
+          requestId,
+          "responses",
+          responderUidParam
+        );
+        const responseSnap = await getDoc(responseRef);
 
-      const responderSnap = await getDoc(doc(db, "users", request.respondedBy));
-      const responderToken = responderSnap.data()?.expoPushToken;
+        if (!responseSnap.exists()) {
+          Alert.alert("Error", "回答が見つかりません");
+          return;
+        }
 
-      if (responderToken) {
-        await fetch("https://exp.host/--/api/v2/push/send", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            to: responderToken,
-            title: "ありがとうが届きました！",
-            body: `${myName}さんから「ありがとう」が届きました`,
-            sound: "default",
-          }),
+        const response = responseSnap.data();
+
+        if (response.thanksSent) {
+          Alert.alert("送信済み", "すでにこの人にありがとうを送りました");
+          router.replace("/(tabs)/reservations");
+          return;
+        }
+
+        // この回答者の response だけを更新。他の回答者の response には影響しない。
+        await updateDoc(responseRef, {
+          thanksSent: true,
+          thanksMessage: THANKS_MESSAGE,
+          thanksFromUid: myUid,
+          thanksFromName: myName,
+          thanksFromGrade: myGrade,
+          thanksFromPhotoURL: myImage,
+          thanksSeenByResponder: false,
+          thanksAt: serverTimestamp(),
         });
+
+        const responderToken = responderData?.expoPushToken;
+
+        if (responderToken) {
+          await fetch("https://exp.host/--/api/v2/push/send", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              to: responderToken,
+              title: "ありがとうが届きました！",
+              body: `${myName}さんから「ありがとう」が届きました`,
+              sound: "default",
+            }),
+          });
+        }
+      } else {
+        // ===== direct投稿：従来通り request 本体を更新 =====
+        if (request.status === "matched" || request.thanksSent) {
+          Alert.alert("送信済み", "すでにありがとうを送りました");
+          router.replace("/(tabs)/reservations");
+          return;
+        }
+
+        if (!request.respondedBy) {
+          Alert.alert("Error", "返事した人が見つかりません");
+          return;
+        }
+
+        await updateDoc(requestRef, {
+          thanksSent: true,
+          thanksMessage: THANKS_MESSAGE,
+          thanksFromUid: myUid,
+          thanksFromName: myName,
+          thanksFromGrade: myGrade,
+          thanksFromPhotoURL: myImage,
+          thanksSeenByResponder: false,
+          thanksAt: serverTimestamp(),
+          status: "matched",
+        });
+
+        const responderSnap = await getDoc(doc(db, "users", request.respondedBy));
+        const responderToken = responderSnap.data()?.expoPushToken;
+
+        if (responderToken) {
+          await fetch("https://exp.host/--/api/v2/push/send", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              to: responderToken,
+              title: "ありがとうが届きました！",
+              body: `${myName}さんから「ありがとう」が届きました`,
+              sound: "default",
+            }),
+          });
+        }
       }
 
-      Alert.alert("送信しました", "相手にありがとうを送りました", [
-        {
-          text: "OK",
-          onPress: () => router.replace("/(tabs)/notifications"),
-        },
-      ]);
+      // 送信完了：カスタムモーダルを表示
+      setShowThanksModal(true);
     } catch (error) {
       Alert.alert("Error", error.message);
     }
+  };
+
+  const closeThanksModal = () => {
+    setShowThanksModal(false);
+    router.replace("/(tabs)/reservations");
   };
 
   if (loading) {
@@ -287,22 +441,28 @@ export default function RequestDetail() {
         alignItems="center"
         justifyContent="center"
       >
-        <Text color="#999">読み込み中...</Text>
+        <Text color="#999" fontFamily={"$body"}>読み込み中...</Text>
       </YStack>
     );
   }
 
-  const responderName =
-    requestData?.respondedByName || getParam(params.name, "名前なし");
+  const responderName = isGroupResponse
+    ? responseData?.name || responderData?.name || "名前なし"
+    : requestData?.respondedByName || getParam(params.name, "名前なし");
 
-  const responderGrade = requestData?.respondedByGrade || "";
+  const responderGrade = isGroupResponse
+    ? responseData?.grade || ""
+    : requestData?.respondedByGrade || "";
 
-  const responderImage =
-    getProfileImage(responderData) ||
-    requestData?.respondedByPhotoURL ||
-    getParam(params.imageUrl, "");
+  const responderImage = isGroupResponse
+    ? responseData?.photoURL || getProfileImage(responderData) || ""
+    : getProfileImage(responderData) ||
+      requestData?.respondedByPhotoURL ||
+      getParam(params.imageUrl, "");
 
-  const timing = requestData?.timing || getParam(params.timing, "");
+  const timing = isGroupResponse
+    ? responseData?.timingLabel || responseData?.timing || ""
+    : requestData?.timing || getParam(params.timing, "");
 
   const talkTags = Array.isArray(requestData?.talkTags)
     ? requestData.talkTags
@@ -316,7 +476,9 @@ export default function RequestDetail() {
 
   const detail = requestData?.detail || getParam(params.detail, "");
 
-  const isMatched = requestData?.status === "matched" || requestData?.thanksSent;
+  const isMatched = isGroupResponse
+    ? !!responseData?.thanksSent
+    : requestData?.status === "matched" || requestData?.thanksSent;
 
   return (
     <YStack flex={1} backgroundColor="#F7F2EA">
@@ -332,12 +494,13 @@ export default function RequestDetail() {
           <Text
             fontSize={36}
             color="#BBB"
-            onPress={() => router.replace("/(tabs)/notifications")}
+            fontFamily={"$body"}
+            onPress={() => router.replace("/(tabs)/reservations")}
           >
             ‹
           </Text>
 
-          <Text fontSize={18} fontWeight="700" marginLeft="$3">
+          <Text fontSize={18} fontWeight="700" marginLeft="$3" fontFamily={"$body"}>
             話しかける
           </Text>
         </XStack>
@@ -360,7 +523,7 @@ export default function RequestDetail() {
               />
 
               <YStack flex={1} gap="$1">
-                <Text fontSize={18} fontWeight="700">
+                <Text fontSize={18} fontWeight="700" fontFamily={"$body"}>
                   {responderName}
                   {responderGrade ? `(${responderGrade})` : ""}
                 </Text>
@@ -373,7 +536,7 @@ export default function RequestDetail() {
                     paddingVertical="$1"
                     borderRadius="$10"
                   >
-                    <Text color="#2AA985" fontSize={13} fontWeight="700">
+                    <Text color="#2AA985" fontSize={13} fontWeight="700" fontFamily={"$body"}>
                       {timing}OK
                     </Text>
                   </YStack>
@@ -390,7 +553,7 @@ export default function RequestDetail() {
                   borderRadius={999}
                   backgroundColor="#FFD966"
                 />
-                <Text fontWeight="700" fontSize={16}>
+                <Text fontWeight="700" fontSize={16} fontFamily={"$body"}>
                   力になってくれること
                 </Text>
               </XStack>
@@ -401,7 +564,7 @@ export default function RequestDetail() {
                     <SmallTagPill key={tag} tag={tag} />
                   ))
                 ) : (
-                  <Text fontSize={13} color="#999">
+                  <Text fontSize={13} color="#999" fontFamily={"$body"}>
                     未設定
                   </Text>
                 )}
@@ -418,7 +581,7 @@ export default function RequestDetail() {
                 borderRadius={999}
                 backgroundColor="#FFD966"
               />
-              <Text fontWeight="700" fontSize={16}>
+              <Text fontWeight="700" fontSize={16} fontFamily={"$body"}>
                 話したいこと
               </Text>
             </XStack>
@@ -434,14 +597,14 @@ export default function RequestDetail() {
             </XStack>
 
             {detail ? (
-              <Text fontSize={14} color="#333" marginTop="$2">
+              <Text fontSize={14} color="#333" marginTop="$2" fontFamily={"$body"}>
                 {detail}
               </Text>
             ) : null}
           </YStack>
 
           {/* 注意書き */}
-          <Text fontSize={14} color="#666" lineHeight={22}>
+          <Text fontSize={14} color="#666" lineHeight={22} fontFamily={"$body"}>
             ※以下のボタンより相手と話すことが約束されます。
             {"\n"}
             「ありがとう」を送って早速話しかけてみましょう
@@ -454,7 +617,7 @@ export default function RequestDetail() {
               padding="$4"
               alignItems="center"
             >
-              <Text fontSize={16} fontWeight="700" color="#2AA985">
+              <Text fontSize={16} fontWeight="700" color="#2AA985" fontFamily={"$body"}>
                 ありがとう送信済みです
               </Text>
             </YStack>
@@ -477,6 +640,12 @@ export default function RequestDetail() {
           )}
         </YStack>
       </ScrollView>
+
+      <ThanksSuccessModal
+        visible={showThanksModal}
+        responderName={responderName}
+        onClose={closeThanksModal}
+      />
     </YStack>
   );
 }
