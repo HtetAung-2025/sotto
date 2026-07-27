@@ -162,23 +162,23 @@ export default function SettingsScreen() {
                 onError={() => setImageError(true)}
               />
             ) : (
-              <Text fontSize={40} fontWeight="700" color="#1A1A1A">
+              <Text fontSize={40} fontWeight="700" color="#1A1A1A" fontFamily={"$body"}>
                 {profile?.name?.charAt(0) || "?"}
               </Text>
             )}
           </Circle>
 
           <YStack alignItems="center" gap="$1">
-            <Text fontSize={24} fontWeight="700" color="#111">
+            <Text fontSize={24} fontWeight="700" color="#111" fontFamily={"$body"}>
               {profile?.name || "名前なし"}
             </Text>
 
-            <Text fontSize={18} color="#999">
+            <Text fontSize={18} color="#999" fontFamily={"$body"}>
               {profile?.grade || ""}
             </Text>
 
             {profile?.groupName ? (
-              <Text fontSize={13} color="#999" marginTop="$1">
+              <Text fontSize={13} color="#999" marginTop="$1" fontFamily={"$body"}>
                 グループ：{profile.groupName}
               </Text>
             ) : null}
@@ -190,36 +190,38 @@ export default function SettingsScreen() {
             padding="$4"
             gap="$3"
           >
-            <Text fontSize={18} fontWeight="700" color="#000">
+            <Text fontSize={18} fontWeight="700" color="#000" fontFamily={"$body"}>
               力になれること
             </Text>
 
-            <XStack flexWrap="wrap" gap="$2">
-              {profile?.tags?.length > 0 ? (
-                profile.tags.map((tag) => {
-                  const iconName = profile?.tagIcons?.[tag] || DEFAULT_ICON_NAME[tag];
-                  const Icon = ICON_BY_NAME[iconName];
-                  return (
-                    <XStack
-                      key={tag}
-                      backgroundColor="#FFF0C2"
-                      paddingHorizontal="$2"
-                      paddingVertical="$1"
-                      borderRadius="$10"
-                      alignItems="center"
-                      gap="$2"
-                    >
-                      {Icon ? <Icon size={16} color="#B8860B" /> : null}
-                      <Text fontSize={13} color="#B8860B">
-                        {tag}
-                      </Text>
-                    </XStack>
-                  );
-                })
-              ) : (
-                <Text color="#999">未設定</Text>
-              )}
-            </XStack>
+        <XStack flexWrap="wrap" gap="$2">
+  {profile?.tags?.length > 0 ? (
+    profile.tags.map((tag) => {
+      const iconName = profile?.tagIcons?.[tag] || DEFAULT_ICON_NAME[tag];
+      const Icon = ICON_BY_NAME[iconName];
+      return (
+        <XStack
+          key={tag}
+          backgroundColor="#FFF0C2"
+          paddingHorizontal="$3"
+          paddingVertical="$2"
+          borderRadius={999}
+          alignItems="center"
+          justifyContent="center"
+          gap="$2"
+          height={36}
+        >
+          {Icon ? <Icon size={16} color="#B8860B" /> : null}
+          <Text fontSize={13} color="#B8860B" fontFamily="$body" lineHeight={16}>
+            {tag}
+          </Text>
+        </XStack>
+      );
+    })
+  ) : (
+    <Text color="#999" fontFamily="$body">未設定</Text>
+  )}
+</XStack>
           </YStack>
 
           <YStack width="80%" gap="$3">
@@ -265,20 +267,22 @@ export default function SettingsScreen() {
             padding="$4"
             gap="$3"
           >
-            <Text fontSize={18} fontWeight="700" color="#000">
+            <Text fontSize={18} fontWeight="700" color="#000" fontFamily={"$body"}>
               通知設定
             </Text>
 
             <XStack alignItems="center" justifyContent="space-between">
-              <Text fontSize={16} color="#B6B6B6">
-                OFF/ON
+              <Text fontSize={16} color="#B6B6B6" fontFamily={"$body"}>
+                オン / オッフ
               </Text>
 
-              <Switch value={notificationOn} onValueChange={toggleNotification} value={notificationOn}
-                onValueChange={toggleNotification}
-                trackColor={{ false: '#767577', true: '#FCF0CD' }}
-                thumbColor={notificationOn ? '#FFDF78' : '#F4F3F4'}
-                ios_backgroundColor="#3E3E3E"/>
+              <Switch
+  value={notificationOn}
+  onValueChange={toggleNotification}
+  trackColor={{ false: '#E0E0E0', true: '#FFD966' }}
+  thumbColor="#FFFFFF"
+  ios_backgroundColor="#E0E0E0"
+/>
             </XStack>
           </YStack>
 

@@ -85,15 +85,15 @@ export default function GroupCreate() {
         {step === 1 && (
           <YStack gap="$5" alignItems="center">
 
-            <Text fontSize={24} fontWeight="700" marginBottom={50}>
+            <Text fontSize={24} fontWeight="700" marginBottom={50} fontFamily={"$heading"}>
               グループ作成
             </Text>
 
-            <Text fontSize={20} alignItems="center">
+            <Text fontSize={20} alignItems="center" fontFamily={"$body"}>
               グループ名を記入してください
             </Text>
 
-            <Text width="85%" fontSize={14} color="#666" lineHeight={22} marginBottom={15}>
+            <Text width="85%" fontSize={14} color="#666" lineHeight={22} marginBottom={15} fontFamily={"$body"}>
               学校名や学部、学科名などでも構いません。
             </Text>
 
@@ -128,6 +128,7 @@ export default function GroupCreate() {
 
             <Text
             color="#B6B6B6"
+            fontFamily={"$body"}
             onPress={() => {
               if (step === 1) {
                 router.back();
@@ -147,21 +148,21 @@ export default function GroupCreate() {
 
         {step === 2 && (
           <YStack gap="$5" alignItems="center">
-            <Text fontSize={22} fontWeight="700" marginBottom={50}>
+            <Text fontSize={22} fontWeight="700" marginBottom={50} fontFamily={"$heading"}>
               グループ作成
             </Text>
 
-            <Text fontSize={20}>
+            <Text fontSize={20} fontFamily={"$body"}>
               グループコードはこちら
             </Text>
 
-            <Text width="85%" fontSize={13} color="#666" lineHeight={21} textAlign="center">
+            <Text width="85%" fontSize={13} color="#666" lineHeight={21} textAlign="center" fontFamily={"$body"}>
               参加してほしい方にこのコードを共有し、
               {"\n"}
               コードを入力してもらうことで参加できます。
             </Text>
 
-            <Text fontSize={15} color="#666">
+            <Text fontSize={15} color="#666" fontFamily={"$body"}>
               参加コード
             </Text>
 
@@ -175,7 +176,7 @@ export default function GroupCreate() {
               borderWidth={1}
               borderColor="#EEE"
             >
-              <Text fontSize={32} fontWeight="800" letterSpacing={8}>
+              <Text fontSize={32} fontWeight="800" letterSpacing={8} fontFamily={"$body"}>
                 {code}
               </Text>
             </YStack>
@@ -189,7 +190,7 @@ export default function GroupCreate() {
                 marginTop: 5,
               }}>
               </Image>
-              <Text marginLeft={5}>
+              <Text marginLeft={5} fontFamily={"$body"}>
                 このグループコードは再表示できません
                 {"\n"}
                 必ず保存してください
@@ -210,6 +211,7 @@ export default function GroupCreate() {
             </Button>
 
             <Text
+            fontFamily={"$body"}
             color="#B6B6B6"
             onPress={() => {
               if (step === 1) {

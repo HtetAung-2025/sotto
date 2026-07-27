@@ -71,7 +71,7 @@ export default function Register() {
         </H1>
       </XStack>
 
-      <Text color="#000" marginLeft={15} marginBlock={-15}>
+      <Text color="#000" marginLeft={15} marginBlock={-15} fontFamily={"$body"}>
         メールアドレス
       </Text>
       <Input
@@ -87,7 +87,7 @@ export default function Register() {
         marginBottom={40}
       />
 
-      <Text color="#000" marginLeft={15} marginBlock={-15}>
+      <Text color="#000" marginLeft={15} marginBlock={-15} fontFamily={"$body"}>
         パスワード
       </Text>
       <Input
@@ -113,7 +113,7 @@ export default function Register() {
         はじめる
       </Button>
 
-      <Text onPress={() => router.push("/")}>ログインへ</Text>
+      <Text fontFamily={"$body"} onPress={() => router.push("/")}>ログインへ</Text>
     </YStack>
   );
 }

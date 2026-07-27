@@ -23,11 +23,11 @@ export default function Group() {
         />
 
         <YStack alignItems="center" gap="$3" marginBottom={150}>
-          <Text fontSize={28} fontWeight="800" color="#000">
+          <Text fontSize={28} fontWeight="800" color="#000"　fontFamily={"$heading"}>
             SOTTOへようこそ！
           </Text>
 
-          <Text fontSize={15} color="#000" textAlign="center" lineHeight={22}>
+          <Text fontSize={15} color="#000" textAlign="center" lineHeight={22}　fontFamily={"$body"}>
             「話してみたい」その気持ちを、
             {"\n"}
             “会話の0.5歩前”から寄り添うアプリです。
@@ -71,7 +71,7 @@ export default function Group() {
           <XStack alignItems="center" gap="$3">
             <UserPlus color="#FFD966" size={28} />
             <YStack>
-              <Text fontSize={20} fontWeight="600" color="000">
+              <Text fontSize={20} fontWeight="600" color="000" fontFamily={"$body"}>
                 グループ参加
               </Text>
             </YStack>

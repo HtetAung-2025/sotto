@@ -137,7 +137,7 @@ export default function LoginScreen() {
           transform: [{ translateY: emailTranslateY }],
         }}
       >
-        <Text color="#000" marginLeft={15}>
+        <Text color="#000" marginLeft={15} fontFamily={"$body"}>
           メールアドレス
         </Text>
         <Input
@@ -160,7 +160,7 @@ export default function LoginScreen() {
           transform: [{ translateY: passwordTranslateY }],
         }}
       >
-        <Text color="#000" marginLeft={15}>
+        <Text color="#000" marginLeft={15} fontFamily={"$body"}>
           パスワード
         </Text>
         <Input
