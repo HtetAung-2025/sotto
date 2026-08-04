@@ -931,23 +931,6 @@ export default function NotificationsScreen() {
                     ))}
                   </XStack>
 
-                  <XStack gap="$2" alignItems="center">
-                    <Text fontSize={13} color="#777" fontFamily={"$body"}>
-                      状態:
-                    </Text>
-
-                    <Text
-                      fontSize={12}
-                      backgroundColor="#E0E0E0"
-                      paddingHorizontal="$2"
-                      paddingVertical="$1"
-                      borderRadius="$10"
-                      fontFamily={"$body"}
-                    >
-                      {req.feelTag}
-                    </Text>
-                  </XStack>
-
                   {req.detail ? (
                     <YStack>
                       <Text fontSize={13} color="#777" fontFamily={"$body"}>
