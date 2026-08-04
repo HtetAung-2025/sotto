@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Animated, Easing } from "react-native";
+import { Alert, Animated, Easing, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { router } from "expo-router";
 import { Image } from "expo-image";
 import { YStack, H1, Input, Button, Text, XStack, Circle } from "tamagui";
@@ -99,119 +99,129 @@ export default function LoginScreen() {
   };
 
   return (
-    <YStack
-      flex={1}
-      justifyContent="center"
-      padding="$4"
-      gap="$4"
-      backgroundColor="#FFF"
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: "#FFF" }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
-      <Animated.View
-        style={{
-          opacity: titleOpacity,
-          transform: [{ translateY: titleTranslateY }],
+      <ScrollView
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: "center",
+          padding: 16,
         }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <Image
-          source={require("../assets/images/logo.png")}
-          style={{
-            width: 70,
-            height: 60,
-            alignSelf: "center",
-            paddingBlock: 80,
-            marginBottom: 70,
-          }}
-        />
+        <YStack gap="$4">
+          <Animated.View
+            style={{
+              opacity: titleOpacity,
+              transform: [{ translateY: titleTranslateY }],
+            }}
+          >
+            <Image
+              source={require("../assets/images/logo.png")}
+              style={{
+                width: 70,
+                height: 60,
+                alignSelf: "center",
+                paddingBlock: 80,
+                marginBottom: 70,
+              }}
+            />
 
-        <XStack alignItems="center" gap="$1" marginLeft={5}>
-          <Circle size={35} backgroundColor="#FFD966" />
-          <H1 color="#000" fontSize={32}>
-            ログイン
-          </H1>
-        </XStack>
-      </Animated.View>
+            <XStack alignItems="center" gap="$1" marginLeft={5}>
+              <Circle size={35} backgroundColor="#FFD966" />
+              <H1 color="#000" fontSize={32}>
+                ログイン
+              </H1>
+            </XStack>
+          </Animated.View>
 
-      <Animated.View
-        style={{
-          opacity: emailOpacity,
-          transform: [{ translateY: emailTranslateY }],
-        }}
-      >
-        <Text color="#000" marginLeft={15} fontFamily={"$body"}>
-          メールアドレス
-        </Text>
-        <Input
-          placeholder="メールアドレス"
-          fontSize={14}
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          backgroundColor="#F2F2F2"
-          border="#B6B6B6"
-          color="#000"
-          marginBottom={20}
-        />
-      </Animated.View>
+          <Animated.View
+            style={{
+              opacity: emailOpacity,
+              transform: [{ translateY: emailTranslateY }],
+            }}
+          >
+            <Text color="#000" marginLeft={15} fontFamily={"$body"}>
+              メールアドレス
+            </Text>
+            <Input
+              placeholder="メールアドレス"
+              fontSize={14}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              backgroundColor="#F2F2F2"
+              border="#B6B6B6"
+              color="#000"
+              marginBottom={20}
+            />
+          </Animated.View>
 
-      <Animated.View
-        style={{
-          opacity: passwordOpacity,
-          transform: [{ translateY: passwordTranslateY }],
-        }}
-      >
-        <Text color="#000" marginLeft={15} fontFamily={"$body"}>
-          パスワード
-        </Text>
-        <Input
-          placeholder="パスワード"
-          fontSize={14}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          backgroundColor="#F2F2F2"
-          border="#B6B6B6"
-          color="#000"
-          marginBottom={40}
-        />
-      </Animated.View>
+          <Animated.View
+            style={{
+              opacity: passwordOpacity,
+              transform: [{ translateY: passwordTranslateY }],
+            }}
+          >
+            <Text color="#000" marginLeft={15} fontFamily={"$body"}>
+              パスワード
+            </Text>
+            <Input
+              placeholder="パスワード"
+              fontSize={14}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              backgroundColor="#F2F2F2"
+              border="#B6B6B6"
+              color="#000"
+              marginBottom={40}
+            />
+          </Animated.View>
 
-      <Animated.View
-        style={{
-          opacity: loginButtonOpacity,
-          transform: [{ translateY: loginButtonTranslateY }],
-        }}
-      >
-        <Button
-          onPress={handleLogin}
-          height={60}
-          borderRadius={30}
-          backgroundColor="#FFF"
-          border="1px solid #000"
-          color="#000"
-          fontSize={20}
-        >
-          ログイン
-        </Button>
-      </Animated.View>
+          <Animated.View
+            style={{
+              opacity: loginButtonOpacity,
+              transform: [{ translateY: loginButtonTranslateY }],
+            }}
+          >
+            <Button
+              onPress={handleLogin}
+              height={60}
+              borderRadius={30}
+              backgroundColor="#FFF"
+              border="1px solid #000"
+              color="#000"
+              fontSize={20}
+            >
+              ログイン
+            </Button>
+          </Animated.View>
 
-      <Animated.View
-        style={{
-          opacity: createButtonOpacity,
-          transform: [{ translateY: createButtonTranslateY }],
-        }}
-      >
-        <Button
-          onPress={() => router.push("/register")}
-          height={60}
-          borderRadius={30}
-          backgroundColor="#FFD966"
-          color="#000"
-          fontSize={20}
-        >
-          初めての方はこちら
-        </Button>
-      </Animated.View>
-    </YStack>
+          <Animated.View
+            style={{
+              opacity: createButtonOpacity,
+              transform: [{ translateY: createButtonTranslateY }],
+            }}
+          >
+            <Button
+              onPress={() => router.push("/register")}
+              height={60}
+              borderRadius={30}
+              backgroundColor="#FFD966"
+              color="#000"
+              fontSize={20}
+            >
+              初めての方はこちら
+            </Button>
+          </Animated.View>
+        </YStack>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
