@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, ScrollView, Image, Pressable } from "react-native";
+import { Alert, ScrollView, Image, Pressable, Platform } from "react-native";
 import { YStack, XStack, Text, Button, Card } from "tamagui";
 import { File, Edit3, BookOpen, GraduationCap, Key, Briefcase, Lightbulb, Music } from "@tamagui/lucide-icons-2";
 import {
@@ -400,30 +400,46 @@ export default function Reservations() {
   };
 
   const handleCancel = async () => {
-    if (!myActivePost) return;
+  if (!myActivePost || cancelling) return;
 
-    Alert.alert("投稿をキャンセルしますか？", "この投稿を取り消します。", [
+  const requestId = myActivePost.id;
+
+  const finishPost = async () => {
+    try {
+      setCancelling(true);
+
+      await updateDoc(doc(db, "requests", requestId), {
+        status: "cancelled",
+      });
+    } catch (error) {
+      console.error("finishPost error:", error);
+
+      if (Platform.OS === "web") {
+        window.alert(`更新できませんでした：${error.message}`);
+      } else {
+        Alert.alert("Error", error.message);
+      }
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  if (Platform.OS === "web") {
+    if (window.confirm("この相談を完了しますか？")) {
+      await finishPost();
+    }
+  } else {
+    Alert.alert("この相談を完了しますか？", "", [
       { text: "戻る", style: "cancel" },
       {
-        text: "キャンセルする",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            setCancelling(true);
-
-            await updateDoc(doc(db, "requests", myActivePost.id), {
-              status: "cancelled",
-            });
-          } catch (error) {
-            Alert.alert("Error", error.message);
-          } finally {
-            setCancelling(false);
-          }
+        text: "完了する",
+        onPress: () => {
+          void finishPost();
         },
       },
     ]);
-  };
-
+  }
+};
   const handleOpenResponder = (requestId, responderUid) => {
     if (!requestId || !responderUid) {
       Alert.alert("Error", "リクエストIDが見つかりません");
