@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { Tabs, useRouter } from "expo-router";
 import { PlusCircle, Bell } from "@tamagui/lucide-icons-2";
-import { Image } from "expo-image";
 import { Text } from "tamagui";
-import { Pressable, View} from "react-native";
+import { Pressable, View, Image } from "react-native";
 
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, onSnapshot, Unsubscribe, doc } from "firebase/firestore";
+import { collection, onSnapshot, doc } from "firebase/firestore";
+import type { Unsubscribe } from "firebase/firestore";
 
 import { auth, db } from "../../lib/firebase";
 
@@ -21,30 +21,45 @@ export default function TabLayout() {
     let unsubscribeUser: Unsubscribe | null = null;
 
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      if (unsubscribeRequests) unsubscribeRequests();
-      if (unsubscribeUser) unsubscribeUser();
-
-      if (!user) {
-        setNotificationCount(0);
-        setPhotoURL("");
-        return;
+      if (unsubscribeRequests) {
+        unsubscribeRequests();
+        unsubscribeRequests = null;
       }
 
+      if (unsubscribeUser) {
+        unsubscribeUser();
+        unsubscribeUser = null;
+      }
+
+      setNotificationCount(0);
+      setPhotoURL("");
+
+      if (!user) return;
+
       // プロフィール画像取得
-      unsubscribeUser = onSnapshot(doc(db, "users", user.uid), (snap) => {
-        if (!snap.exists()) return;
+      unsubscribeUser = onSnapshot(
+        doc(db, "users", user.uid),
+        (snap) => {
+          if (!snap.exists()) {
+            setPhotoURL("");
+            return;
+          }
 
-        const data = snap.data();
+          const data = snap.data();
 
-        setPhotoURL(
-          data.photoURL ||
-            data.profileImageUrl ||
-            data.profileImage ||
-            data.imageUrl ||
-            data.avatarUrl ||
-            "",
-        );
-      });
+          setPhotoURL(
+            data.photoURL ||
+              data.profileImageUrl ||
+              data.profileImage ||
+              data.imageUrl ||
+              data.avatarUrl ||
+              ""
+          );
+        },
+        (error) => {
+          console.error("Profile listener error:", error);
+        }
+      );
 
       // 通知バッジ
       unsubscribeRequests = onSnapshot(
@@ -93,6 +108,9 @@ export default function TabLayout() {
 
           setNotificationCount(count);
         },
+        (error) => {
+          console.error("Requests listener error:", error);
+        }
       );
     });
 
@@ -113,99 +131,100 @@ export default function TabLayout() {
   return (
     <Tabs
       initialRouteName="reservations"
-screenOptions={{
-  headerShown: true,
-  headerTitleAlign: "center",
+      screenOptions={{
+        headerShown: true,
+        headerTitleAlign: "center",
 
-  headerStyle: {
-    height: 110,
-  },
+        headerStyle: {
+          height: 110,
+        },
 
-  headerTitleStyle: {
-    fontFamily: "ZenMaruGothic_700Bold",
-    fontSize: 22,
-  },
+        headerTitleStyle: {
+          fontFamily: "ZenMaruGothic_700Bold",
+          fontSize: 22,
+        },
 
-  headerRight: () => (
-    <Pressable
-      onPress={() => router.push("/profile")}
-      style={{
-        marginRight: 16,
-        marginBottom: -4,
-      }}
-    >
-      {photoURL ? (
-        <Image
-          source={{ uri: photoURL }}
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            borderWidth: 1,
-            borderColor: "#DDD",
-          }}
-        />
-      ) : (
-        <View
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: "#FFD966",
-            justifyContent: "center",
-            alignItems: "center",
-            borderWidth: 1,
-            borderColor: "#DDD",
-          }}
-        >
-          <Text
-            fontFamily="$body"
-            fontSize={18}
-            fontWeight="700"
-            color="#333"
+        headerRight: () => (
+          <Pressable
+            onPress={() => router.push("/profile")}
+            accessibilityRole="button"
+            accessibilityLabel="プロフィールを開く"
+            style={{
+              marginRight: 16,
+              marginBottom: -4,
+            }}
           >
-            ?
-          </Text>
-        </View>
-      )}
-    </Pressable>
-  ),
+            {photoURL ? (
+              <Image
+                source={{ uri: photoURL }}
+                resizeMode="cover"
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  borderColor: "#DDD",
+                }}
+              />
+            ) : (
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: "#FFD966",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: "#DDD",
+                }}
+              >
+                <Text
+                  fontFamily="$body"
+                  fontSize={18}
+                  fontWeight="700"
+                  color="#333"
+                >
+                  ?
+                </Text>
+              </View>
+            )}
+          </Pressable>
+        ),
 
-  tabBarActiveTintColor: "#FFF",
-  tabBarInactiveTintColor: "#999",
+        tabBarActiveTintColor: "#FFF",
+        tabBarInactiveTintColor: "#999",
 
-  tabBarLabelStyle: {
-    fontFamily: "ZenMaruGothic_700Bold",
-    fontSize: 12,
-  },
+        tabBarLabelStyle: {
+          fontFamily: "ZenMaruGothic_700Bold",
+          fontSize: 12,
+        },
 
-  tabBarStyle: {
-    height: 80,
-    marginBottom: -12,
-    paddingBottom: 12,
-    backgroundColor: "#fff",
-    borderTopWidth: 0,
-  },
+        tabBarStyle: {
+          height: 80,
+          marginBottom: -12,
+          paddingBottom: 12,
+          backgroundColor: "#fff",
+          borderTopWidth: 0,
+        },
 
-  tabBarItemStyle: {
-    height: "100%",
-    overflow: "hidden",
-  },
+        tabBarItemStyle: {
+          height: "100%",
+          overflow: "hidden",
+        },
 
-  tabBarIconStyle: {
-    marginTop: 5,
-  },
-}}
+        tabBarIconStyle: {
+          marginTop: 5,
+        },
+      }}
     >
       <Tabs.Screen
         name="reservations"
         options={{
           title: "話しかける",
-          tabBarIcon: ({ color }) => 
-          <Image 
-              source={require("../../assets/images/reservations_icon.svg")} 
-              style={{ width: 35, height: 26, marginLeft: 5, tintColor: color }} 
-            />,
+          tabBarIcon: ({ color }) => (
+            <PlusCircle size={28} color={color} />
+          ),
           tabBarActiveBackgroundColor: "#B6B6B6",
           tabBarInactiveBackgroundColor: "#fff",
           tabBarItemStyle: {
@@ -219,11 +238,9 @@ screenOptions={{
         name="notifications"
         options={{
           title: "通知",
-          tabBarIcon: ({ color }) => 
-          <Image 
-            source={require("../../assets/images/notifications_icon.svg")} 
-            style={{ width: 31, height: 24, tintColor: color }} 
-          />,
+          tabBarIcon: ({ color }) => (
+            <Bell size={26} color={color} />
+          ),
           tabBarActiveBackgroundColor: "#B6B6B6",
           tabBarInactiveBackgroundColor: "#fff",
           tabBarItemStyle: {
@@ -252,15 +269,17 @@ screenOptions={{
           headerLeft: () => (
             <Pressable
               onPress={() => router.back()}
+              accessibilityRole="button"
+              accessibilityLabel="戻る"
               style={{ marginLeft: 16 }}
             >
-             <Text
-  fontFamily="$body"
-  fontSize={32}
-  color="#BBB"
->
-  ‹
-</Text>
+              <Text
+                fontFamily="$body"
+                fontSize={32}
+                color="#BBB"
+              >
+                ‹
+              </Text>
             </Pressable>
           ),
         }}
