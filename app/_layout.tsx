@@ -9,7 +9,10 @@ import {
   ZenMaruGothic_700Bold,
 } from "@expo-google-fonts/zen-maru-gothic";
 import { Provider } from "../components/Provider";
-import { configureNotificationActions } from "../lib/notifications";
+import {
+  configureNotificationActions,
+  registerForPushNotificationsAsync,
+} from "../lib/notifications";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -21,8 +24,13 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    configureNotificationActions();
-  }, []);
+  const initNotifications = async () => {
+    await configureNotificationActions();
+    await registerForPushNotificationsAsync();
+  };
+
+  initNotifications();
+}, []);
 
   const onLayoutRootView = useCallback(async () => {
     if (fontsLoaded) {
